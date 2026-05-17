@@ -84,7 +84,7 @@
   }
   .hud-bottom .lb-btn:active { transform: scale(0.9); }
 
-  /* Top theme strip — horizontal scrollable, precise capsule */
+  /* Top theme strip — minimal numbered dots, no capsule */
   .theme-strip {
     position: absolute; left: 0; right: 0;
     top: calc(14px + env(safe-area-inset-top));
@@ -93,103 +93,113 @@
   }
   .theme-strip__inner {
     pointer-events: auto;
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 8px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 6px;
     max-width: calc(100% - 24px);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    background: rgba(8, 10, 22, 0.32);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
-            backdrop-filter: blur(18px) saturate(140%);
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow:
-      0 8px 32px -8px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .theme-strip__inner::-webkit-scrollbar { display: none; }
   .theme-chip {
     flex: 0 0 auto;
-    width: 36px; height: 36px;
+    width: 26px; height: 26px;
     border-radius: 50%;
     cursor: pointer;
-    background: var(--chip);
-    border: 1.5px solid rgba(255, 255, 255, 0.18);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.30),
-      inset 0 -3px 6px rgba(0, 0, 0, 0.22),
-      0 1px 2px rgba(0, 0, 0, 0.30);
-    opacity: 0.60;
+    /* Sandwich: semi-dark fill (visible on light bg) + white border (visible on dark bg) */
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
     display: flex; align-items: center; justify-content: center;
-    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    opacity: 0.78;
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
                 opacity 0.22s ease,
+                background 0.22s ease,
                 border-color 0.22s ease,
-                box-shadow 0.28s ease;
+                color 0.22s ease;
     -webkit-tap-highlight-color: transparent;
-  }
-  .theme-chip svg {
-    width: 18px; height: 18px;
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.92);
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
-    transition: stroke 0.22s ease;
   }
   .theme-chip.active {
     opacity: 1;
-    transform: scale(1.16);
-    border-color: rgba(255, 255, 255, 0.85);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.45),
-      inset 0 -3px 6px rgba(0, 0, 0, 0.25),
-      0 0 0 2px rgba(255, 255, 255, 0.10),
-      0 0 18px currentColor,
-      0 3px 10px rgba(0, 0, 0, 0.45);
+    transform: scale(1.10);
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(255, 255, 255, 1);
+    color: rgba(20, 20, 30, 0.92);
+    text-shadow: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
   }
-  .theme-chip.active svg { stroke: #fff; }
-  .theme-chip[data-t="vanity"]  { --chip: radial-gradient(circle at 32% 28%, #fff2dc 0%, #f3b388 45%, #b25c45 100%); color: #ffb98a; }
-  .theme-chip[data-t="rain"]    { --chip: radial-gradient(circle at 32% 28%, #b5cdff 0%, #4b6db6 50%, #1a2c52 100%); color: #56a3ff; }
-  .theme-chip[data-t="winter"]  { --chip: radial-gradient(circle at 32% 28%, #ffffff 0%, #d6e3f2 50%, #8aa0bc 100%); color: #cfdcf0; }
-  .theme-chip[data-t="aquarium"]{ --chip: radial-gradient(circle at 32% 28%, #b1ecf2 0%, #2596a8 50%, #0a3f54 100%); color: #4cd0e0; }
-  .theme-chip[data-t="sunset"]  { --chip: radial-gradient(circle at 32% 28%, #ffe190 0%, #ff8030 50%, #8c1f30 100%); color: #ff8a4a; }
-  .theme-chip[data-t="sakura"]  { --chip: radial-gradient(circle at 32% 28%, #ffe0e8 0%, #f298b0 50%, #a44572 100%); color: #ff90b0; }
 
-  /* Centered first-time wipe hint */
+  /* Centered first-time hint — ghost finger doing one wipe stroke */
   .wipe-hint {
     position: absolute; left: 0; right: 0; top: 0; bottom: 0;
     z-index: 28; pointer-events: none;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    color: rgba(255, 255, 255, 0.85);
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45), 0 0 18px rgba(0, 0, 0, 0.25);
     transition: opacity 0.6s ease;
   }
   .wipe-hint.gone { opacity: 0; }
-  .wipe-hint svg {
-    width: 96px; height: 56px;
+  .ghost-finger {
+    position: absolute;
+    width: 38px; height: 52px;
+    transform-origin: 50% 28%;
+    will-change: transform, opacity;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .ghost-finger.show { opacity: 1; }
+  .ghost-finger svg {
+    width: 100%; height: 100%;
     fill: none;
-    stroke: rgba(255, 255, 255, 0.85);
-    stroke-width: 3;
+    /* Dark stroke is visible on white frost; bright outer glow keeps it
+       visible if the user has wiped to a darker scene underneath. */
+    stroke: rgba(40, 40, 56, 0.90);
+    stroke-width: 2.4;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45));
-    animation: fw-wipe-anim 2.4s ease-in-out infinite;
+    filter:
+      drop-shadow(0 0 4px rgba(255, 255, 255, 0.85))
+      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  }
+  /* Ripple under fingertip while wiping */
+  .ghost-finger__ripple {
+    position: absolute;
+    left: 50%; top: 28%;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(40, 40, 56, 0.75);
+    transform: translate(-50%, -50%);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.6),
+      0 0 14px rgba(255, 255, 255, 0.55);
+    animation: fw-ghost-ripple 1.2s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes fw-ghost-ripple {
+    0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.85; }
+    100% { transform: translate(-50%, -50%) scale(2.2);  opacity: 0;    }
   }
   .wipe-hint__label {
-    margin-top: 22px;
-    font-size: 13px; letter-spacing: 0.36em; text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.85);
+    position: absolute;
+    left: 50%; bottom: 36%;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.36em; text-transform: uppercase;
+    /* Dark text + bright halo: visible on white frost AND on revealed dark scene */
+    color: rgba(30, 30, 42, 0.90);
+    text-shadow:
+      0 0 4px rgba(255, 255, 255, 0.95),
+      0 0 10px rgba(255, 255, 255, 0.65),
+      0 1px 2px rgba(0, 0, 0, 0.20);
     animation: fw-hint-pulse 2.4s ease-in-out infinite;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    white-space: nowrap;
   }
-  @keyframes fw-wipe-anim {
-    0%, 100% { transform: translateX(-22px) rotate(-3deg); }
-    50%      { transform: translateX(22px)  rotate(3deg);  }
-  }
+  .wipe-hint__label.show { opacity: 1; }
   @keyframes fw-hint-pulse {
     0%, 100% { opacity: 0.55; }
     50%      { opacity: 1; }
@@ -278,45 +288,37 @@
 
   <div class="theme-strip" id="themeStrip">
     <div class="theme-strip__inner">
-      <div class="theme-chip" data-t="vanity" aria-label="Vanity">
-        <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.5.7 1 1.5 1 2.5h6c0-1 .5-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>
-      </div>
-      <div class="theme-chip active" data-t="rain" aria-label="Rain">
-        <svg viewBox="0 0 24 24"><path d="M16 13a3.5 3.5 0 0 0-1-6.9 5.5 5.5 0 0 0-10 1.9A2.6 2.6 0 0 0 6 13h10z"/><line x1="9" y1="17" x2="9" y2="20"/><line x1="13" y1="17" x2="13" y2="21"/><line x1="17" y1="17" x2="17" y2="20"/></svg>
-      </div>
-      <div class="theme-chip" data-t="winter" aria-label="Winter">
-        <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4" y1="7" x2="20" y2="17"/><line x1="4" y1="17" x2="20" y2="7"/><polyline points="9.5,5.5 12,4 14.5,5.5"/><polyline points="9.5,18.5 12,20 14.5,18.5"/></svg>
-      </div>
-      <div class="theme-chip" data-t="aquarium" aria-label="Aquarium">
-        <svg viewBox="0 0 24 24"><path d="M3 7c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0"/><path d="M3 13c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0"/><path d="M3 19c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0"/></svg>
-      </div>
-      <div class="theme-chip" data-t="sunset" aria-label="Sunset">
-        <svg viewBox="0 0 24 24"><path d="M5 17a7 7 0 0 1 14 0"/><line x1="2" y1="17" x2="22" y2="17"/><line x1="2" y1="20.5" x2="22" y2="20.5"/><line x1="12" y1="4" x2="12" y2="6"/><line x1="5.5" y1="8.5" x2="6.8" y2="9.8"/><line x1="18.5" y1="8.5" x2="17.2" y2="9.8"/></svg>
-      </div>
-      <div class="theme-chip" data-t="sakura" aria-label="Sakura">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M12 4.5c-1.8 0-3 1.7-3 3.2 0 1.1 1 2 3 2s3-.9 3-2c0-1.5-1.2-3.2-3-3.2z"/><path d="M12 19.5c-1.8 0-3-1.7-3-3.2 0-1.1 1-2 3-2s3 .9 3 2c0 1.5-1.2 3.2-3 3.2z"/><path d="M4.5 12c0-1.8 1.7-3 3.2-3 1.1 0 2 1 2 3s-.9 3-2 3c-1.5 0-3.2-1.2-3.2-3z"/><path d="M19.5 12c0-1.8-1.7-3-3.2-3-1.1 0-2 1-2 3s.9 3 2 3c1.5 0 3.2-1.2 3.2-3z"/></svg>
-      </div>
+      <div class="theme-chip" data-t="vanity" aria-label="Vanity Mirror">1</div>
+      <div class="theme-chip active" data-t="rain" aria-label="Rain">2</div>
+      <div class="theme-chip" data-t="winter" aria-label="Winter">3</div>
+      <div class="theme-chip" data-t="aquarium" aria-label="Aquarium">4</div>
+      <div class="theme-chip" data-t="sunset" aria-label="Sunset">5</div>
+      <div class="theme-chip" data-t="sakura" aria-label="Sakura">6</div>
     </div>
   </div>
 
-  <!-- First-time wipe hint -->
+  <!-- First-time hint: ghost finger demoes a wipe -->
   <div class="wipe-hint" id="wipeHint">
-    <svg viewBox="0 0 96 56" aria-hidden="true">
-      <!-- swipe-track arrows -->
-      <line x1="10" y1="28" x2="34" y2="28"/>
-      <polyline points="18,20 10,28 18,36"/>
-      <line x1="62" y1="28" x2="86" y2="28"/>
-      <polyline points="78,20 86,28 78,36"/>
-      <!-- finger circle + index trail -->
-      <circle cx="48" cy="28" r="9"/>
-      <line x1="48" y1="28" x2="48" y2="44" stroke-dasharray="2 3"/>
-    </svg>
-    <div class="wipe-hint__label">Drag to wipe</div>
+    <div class="wipe-hint__label" id="wipeHintLabel">Drag to wipe</div>
+    <div class="ghost-finger" id="ghostFinger">
+      <svg viewBox="0 0 38 52" aria-hidden="true">
+        <!-- thumb stub -->
+        <path d="M6 30 L4 26 L4 22 L7 21" />
+        <!-- index finger pointing up to fingertip ring -->
+        <path d="M14 24 L14 12 a4 4 0 0 1 8 0 L22 24" />
+        <!-- palm + 3 fingers folded -->
+        <path d="M6 30 L6 42 a6 6 0 0 0 6 6 L24 48 a6 6 0 0 0 6 -6 L30 26 a3 3 0 0 0 -6 0 L24 26 L24 24" />
+        <!-- knuckle lines on folded fingers -->
+        <path d="M22 32 L30 32" />
+        <path d="M22 38 L30 38" />
+      </svg>
+      <div class="ghost-finger__ripple"></div>
+    </div>
   </div>
 
   <div class="hud-bottom">
     <div class="title" id="title">Frosted Window</div>
-    <div class="count hint" id="count">Drag to wipe</div>
+    <div class="count" id="count" style="display:none">0</div>
     <button type="button" class="lb-btn" id="lbToggleBtn" aria-label="Leaderboard">🏆</button>
   </div>
 
@@ -954,36 +956,65 @@
       c.fill();
     }
 
-    // Fish silhouettes — small + bright
-    const fish = [
-      { x: 0.18, y: 0.42, sc: 16, col: '#ffd24a', flip: 0 },
-      { x: 0.46, y: 0.55, sc: 22, col: '#ff7a55', flip: 1 },
-      { x: 0.74, y: 0.38, sc: 18, col: '#5fc8d6', flip: 0 },
-      { x: 0.32, y: 0.68, sc: 12, col: '#ffd24a', flip: 1 },
-      { x: 0.62, y: 0.72, sc: 14, col: '#ff5fbf', flip: 0 },
-    ];
-    fish.forEach(f => {
-      const fx = f.x * w, fy = f.y * h, s = f.sc;
+    // Jellyfish silhouettes — drifting, translucent bells with trailing tentacles
+    function drawJellyfish(x, y, scale, alpha, tint) {
       c.save();
-      c.translate(fx, fy);
-      if (f.flip) c.scale(-1, 1);
-      // body
-      c.fillStyle = f.col;
+      c.translate(x, y);
+      c.scale(scale, scale);
+      // glow halo around bell
+      const halo = c.createRadialGradient(0, -2, 0, 0, -2, 26);
+      halo.addColorStop(0,   `rgba(${tint}, ${alpha * 0.55})`);
+      halo.addColorStop(0.5, `rgba(${tint}, ${alpha * 0.18})`);
+      halo.addColorStop(1,   `rgba(${tint}, 0)`);
+      c.fillStyle = halo;
+      c.fillRect(-30, -30, 60, 60);
+      // bell (dome + scalloped lower edge)
+      c.fillStyle = `rgba(${tint}, ${alpha})`;
       c.beginPath();
-      c.ellipse(0, 0, s, s * 0.55, 0, 0, Math.PI * 2);
-      c.fill();
-      // tail
-      c.beginPath();
-      c.moveTo(-s, 0);
-      c.lineTo(-s * 1.6, -s * 0.45);
-      c.lineTo(-s * 1.6, s * 0.45);
+      c.moveTo(-14, 2);
+      c.bezierCurveTo(-14, -16, 14, -16, 14, 2);
+      c.bezierCurveTo(11, 6, 9, 3, 6, 6);
+      c.bezierCurveTo(3, 3, 1, 6, -1, 4);
+      c.bezierCurveTo(-3, 6, -5, 3, -8, 6);
+      c.bezierCurveTo(-11, 3, -12, 6, -14, 2);
       c.closePath();
       c.fill();
-      // eye
-      c.fillStyle = '#000';
-      c.beginPath(); c.arc(s * 0.5, -s * 0.1, 1.6, 0, Math.PI * 2); c.fill();
+      // bell highlight (subtle gloss)
+      c.fillStyle = `rgba(255, 255, 255, ${alpha * 0.55})`;
+      c.beginPath();
+      c.ellipse(-3, -7, 4.5, 2.2, -0.3, 0, Math.PI * 2);
+      c.fill();
+      // tentacles — drifting wavy lines
+      c.strokeStyle = `rgba(${tint}, ${alpha * 0.7})`;
+      c.lineWidth = 1.2;
+      c.lineCap = 'round';
+      for (let i = 0; i < 7; i++) {
+        const tx = -11 + i * 3.5;
+        c.beginPath();
+        c.moveTo(tx, 5);
+        c.bezierCurveTo(tx + 2, 14, tx - 3, 24, tx + ((i & 1) ? 2 : -2), 38);
+        c.stroke();
+      }
+      // long center oral arm
+      if (scale > 1.0) {
+        c.strokeStyle = `rgba(${tint}, ${alpha * 0.5})`;
+        c.lineWidth = 1.6;
+        c.beginPath();
+        c.moveTo(-3, 6);
+        c.bezierCurveTo(-1, 18, -4, 30, 0, 48);
+        c.stroke();
+        c.beginPath();
+        c.moveTo(3, 6);
+        c.bezierCurveTo(5, 18, 2, 30, 4, 48);
+        c.stroke();
+      }
       c.restore();
-    });
+    }
+    drawJellyfish(w * 0.22, h * 0.30, 1.5, 0.60, '255, 240, 250');
+    drawJellyfish(w * 0.68, h * 0.40, 2.0, 0.55, '240, 230, 255');
+    drawJellyfish(w * 0.46, h * 0.58, 1.2, 0.55, '255, 245, 240');
+    drawJellyfish(w * 0.86, h * 0.55, 1.0, 0.45, '230, 240, 255');
+    drawJellyfish(w * 0.10, h * 0.62, 0.9, 0.40, '255, 235, 245');
 
     // Subtle horizontal water tint overlay
     const water = c.createLinearGradient(0, 0, 0, h);
@@ -1773,6 +1804,7 @@
     if (!firstTouch) {
       firstTouch = true;
       countEl.classList.remove('hint');
+      countEl.style.display = '';
       countEl.textContent = formatScore(lifetime);
       // fade out the centered wipe hint
       if (wipeHintEl) wipeHintEl.classList.add('gone');
@@ -1973,12 +2005,73 @@
                     : 'rain';
   applyTheme(startTheme);
 
-  if (lifetime > 0) {
+  const forceIntro = new URLSearchParams(window.location.search).get('intro') === '1';
+  if (lifetime > 0 && !forceIntro) {
     countEl.classList.remove('hint');
+    countEl.style.display = '';
     countEl.textContent = formatScore(lifetime);
     firstTouch = true;
-    // Returning player — skip the wipe hint, they already know
+    // Returning player — skip the demo, they already know
     if (wipeHintEl) wipeHintEl.style.display = 'none';
+  } else if (!isPoster) {
+    // First-time greeter: ghost finger demonstrates one wipe stroke
+    if (forceIntro) firstTouch = false;
+    runIntroDemo();
+  }
+
+  function runIntroDemo() {
+    if (firstTouch) return;
+    const ghost = document.getElementById('ghostFinger');
+    const label = document.getElementById('wipeHintLabel');
+    if (!ghost) return;
+    const cx = W * 0.5, cy = H * 0.50;
+    const startX = cx - Math.min(110, W * 0.25);
+    const endX   = cx + Math.min(110, W * 0.25);
+    // Fingertip sits at SVG (50%, 28%) ≈ (19, 14.6) of a 38x52 ghost
+    const TX_OFF = 19, TY_OFF = 14.6;
+    function placeGhost(x, y, rot = 0) {
+      ghost.style.transform = `translate(${x - TX_OFF}px, ${y - TY_OFF}px) rotate(${rot}deg)`;
+    }
+    placeGhost(startX, cy, -8);
+    requestAnimationFrame(() => ghost.classList.add('show'));
+
+    // Pause briefly to let user see the hand appear before it moves
+    setTimeout(() => {
+      if (firstTouch) return;
+      const duration = 1800;
+      const T0 = performance.now();
+      let lastWipeT = 0;
+      lastPt = null;
+      const tick = (now) => {
+        if (firstTouch) return;
+        const elapsed = now - T0;
+        const f = Math.min(1, elapsed / duration);
+        // ease-in-out cubic
+        const ease = f < 0.5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3) / 2;
+        const x = startX + (endX - startX) * ease;
+        const tilt = -8 + 16 * ease;     // -8° → +8°
+        placeGhost(x, cy, tilt);
+        if (now - lastWipeT > 40) {
+          lastWipeT = now;
+          wipeAt(x, cy, 32);
+        }
+        if (f < 1) requestAnimationFrame(tick);
+        else {
+          // Stroke done — show label + keep ghost visible briefly
+          label.classList.add('show');
+          setTimeout(() => {
+            if (firstTouch) return;
+            ghost.classList.remove('show');
+          }, 1600);
+          // After ~6s total with no touch, also fade label
+          setTimeout(() => {
+            if (firstTouch) return;
+            if (wipeHintEl) wipeHintEl.classList.add('gone');
+          }, 5500);
+        }
+      };
+      requestAnimationFrame(tick);
+    }, 450);
   }
 
   // Poster mode — hide bottom HUD + show top title + wipe a big swirl (synchronous)
