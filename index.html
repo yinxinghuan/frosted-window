@@ -104,35 +104,46 @@
   .theme-strip__inner::-webkit-scrollbar { display: none; }
   .theme-chip {
     flex: 0 0 auto;
-    width: 26px; height: 26px;
+    width: 22px; height: 22px;
     border-radius: 50%;
     cursor: pointer;
-    /* Sandwich: semi-dark fill (visible on light bg) + white border (visible on dark bg) */
-    background: rgba(0, 0, 0, 0.22);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    -webkit-backdrop-filter: blur(2px);
-            backdrop-filter: blur(2px);
+    /* Transparent ring with dual-tone outline: white border sits on top, a
+       razor-thin black ring is added via box-shadow so the chip stays
+       visible on both white frost and dark revealed scenes. */
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 0 0 0.5px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 0.5px rgba(0, 0, 0, 0.15);
     display: flex; align-items: center; justify-content: center;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 11px; font-weight: 600;
-    color: rgba(255, 255, 255, 0.92);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    font: 600 10.5px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+          'Helvetica Neue', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: rgba(255, 255, 255, 0.95);
+    /* digit sandwich: dark shadow keeps it visible on light frost */
+    text-shadow:
+      0 0 1.5px rgba(0, 0, 0, 0.85),
+      0 1px 1px rgba(0, 0, 0, 0.45);
     opacity: 0.78;
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
                 opacity 0.22s ease,
                 background 0.22s ease,
                 border-color 0.22s ease,
-                color 0.22s ease;
+                color 0.22s ease,
+                box-shadow 0.22s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .theme-chip.active {
     opacity: 1;
-    transform: scale(1.10);
-    background: rgba(255, 255, 255, 0.92);
+    transform: scale(1.18);
+    background: rgba(255, 255, 255, 0.96);
     border-color: rgba(255, 255, 255, 1);
-    color: rgba(20, 20, 30, 0.92);
+    color: rgba(18, 18, 26, 0.92);
     text-shadow: none;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+    box-shadow:
+      0 0 0 0.5px rgba(0, 0, 0, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.18);
   }
 
   /* Centered first-time hint — ghost finger doing one wipe stroke */
@@ -1895,11 +1906,14 @@
     }
   }
   function flushScore() {
+    // Only persist if there is unsaved progress; this avoids re-writing
+    // a cleared localStorage from in-memory state on page unload.
+    if (pendingScore <= 0) return;
     saveLifetime();
-    if (pendingScore > 0 && window.GG_LB && window.GG_LB.submitScore) {
+    if (window.GG_LB && window.GG_LB.submitScore) {
       window.GG_LB.submitScore(Math.floor(lifetime));
-      pendingScore = 0;
     }
+    pendingScore = 0;
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushScore(); });
   window.addEventListener('pagehide', flushScore);
@@ -2055,19 +2069,15 @@
           lastWipeT = now;
           wipeAt(x, cy, 32);
         }
-        if (f < 1) requestAnimationFrame(tick);
-        else {
-          // Stroke done — show label + keep ghost visible briefly
+        if (f < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          // Stroke done — show label and KEEP ghost visible until first touch.
+          // Important for preload: even if the game runs the demo while the
+          // user is still on the previous game, the ghost + label remain in
+          // place when they finally land here. They fade on first pointerdown.
           label.classList.add('show');
-          setTimeout(() => {
-            if (firstTouch) return;
-            ghost.classList.remove('show');
-          }, 1600);
-          // After ~6s total with no touch, also fade label
-          setTimeout(() => {
-            if (firstTouch) return;
-            if (wipeHintEl) wipeHintEl.classList.add('gone');
-          }, 5500);
+          ghost.classList.add('idle');
         }
       };
       requestAnimationFrame(tick);
