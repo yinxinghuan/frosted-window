@@ -107,43 +107,38 @@
     width: 22px; height: 22px;
     border-radius: 50%;
     cursor: pointer;
-    /* Transparent ring with dual-tone outline: white border sits on top, a
-       razor-thin black ring is added via box-shadow so the chip stays
-       visible on both white frost and dark revealed scenes. */
+    /* Inactive: transparent ring with white border + white digit. The dark
+       digit shadow + a faint inner dark ring keep it readable on white frost. */
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.92);
-    box-shadow:
-      0 0 0 0.5px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 0.5px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.35);
     display: flex; align-items: center; justify-content: center;
     font: 600 10.5px/1 -apple-system, BlinkMacSystemFont, 'SF Pro Display',
           'Helvetica Neue', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    color: rgba(255, 255, 255, 0.95);
-    /* digit sandwich: dark shadow keeps it visible on light frost */
+    color: rgba(255, 255, 255, 0.96);
     text-shadow:
-      0 0 1.5px rgba(0, 0, 0, 0.85),
-      0 1px 1px rgba(0, 0, 0, 0.45);
-    opacity: 0.78;
+      0 0 2px rgba(0, 0, 0, 0.75),
+      0 1px 1px rgba(0, 0, 0, 0.55);
+    opacity: 0.80;
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
                 opacity 0.22s ease,
                 background 0.22s ease,
                 border-color 0.22s ease,
-                color 0.22s ease,
                 box-shadow 0.22s ease;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Active: inverted — dark fill + white digit. No shadows needed; the dark
+     ring carves itself out of the white frost cleanly. */
   .theme-chip.active {
     opacity: 1;
-    transform: scale(1.18);
-    background: rgba(255, 255, 255, 0.96);
+    transform: scale(1.15);
+    background: rgba(18, 20, 28, 0.94);
     border-color: rgba(255, 255, 255, 1);
-    color: rgba(18, 18, 26, 0.92);
-    text-shadow: none;
-    box-shadow:
-      0 0 0 0.5px rgba(0, 0, 0, 0.35),
-      0 2px 6px rgba(0, 0, 0, 0.18);
+    color: #ffffff;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
   }
 
   /* Centered first-time hint — ghost finger doing one wipe stroke */
