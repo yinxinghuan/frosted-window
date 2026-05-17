@@ -84,24 +84,51 @@
   }
   .hud-bottom .lb-btn:active { transform: scale(0.9); }
 
-  /* Top-right theme dots */
-  .theme-dots {
-    position: absolute; right: 14px; top: 14px;
-    display: flex; gap: 8px; padding: 8px;
-    padding-top: calc(8px + env(safe-area-inset-top));
-    pointer-events: auto; z-index: 30;
+  /* Bottom theme strip — horizontal scrollable */
+  .theme-strip {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(110px + env(safe-area-inset-bottom));
+    z-index: 30; pointer-events: none;
+    display: flex; justify-content: center;
   }
-  .theme-dots .dot {
-    width: 14px; height: 14px; border-radius: 50%;
-    cursor: pointer; opacity: 0.45;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-    box-shadow: 0 0 10px currentColor;
-    border: 1px solid rgba(255,255,255,0.5);
+  .theme-strip__inner {
+    pointer-events: auto;
+    display: flex; gap: 12px;
+    padding: 8px 14px;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background: rgba(0, 0, 0, 0.22);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
   }
-  .theme-dots .dot.active { opacity: 1; transform: scale(1.22); }
-  .theme-dots .dot[data-t="vanity"]  { background: #ffc9a8; color: #ffc9a8; }
-  .theme-dots .dot[data-t="rain"]    { background: #56a3ff; color: #56a3ff; }
-  .theme-dots .dot[data-t="winter"]  { background: #e6f0ff; color: #cfd8ff; }
+  .theme-strip__inner::-webkit-scrollbar { display: none; }
+  .theme-chip {
+    flex: 0 0 auto;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    background: var(--chip);
+    box-shadow: 0 0 12px currentColor, inset 0 1px 0 rgba(255,255,255,0.25);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    opacity: 0.55;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, border-color 0.22s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .theme-chip.active {
+    opacity: 1;
+    transform: scale(1.20);
+    border-color: rgba(255, 255, 255, 0.95);
+  }
+  .theme-chip[data-t="vanity"]  { --chip: radial-gradient(circle at 35% 30%, #fff2dc, #d68868); color: #ffb98a; }
+  .theme-chip[data-t="rain"]    { --chip: radial-gradient(circle at 35% 30%, #aac6ff, #2c4778); color: #56a3ff; }
+  .theme-chip[data-t="winter"]  { --chip: radial-gradient(circle at 35% 30%, #fff, #b1c4dc); color: #d4e3f4; }
+  .theme-chip[data-t="aquarium"]{ --chip: radial-gradient(circle at 35% 30%, #87dfeb, #0b475a); color: #4cd0e0; }
+  .theme-chip[data-t="sunset"]  { --chip: radial-gradient(circle at 35% 30%, #ffd770, #b03020); color: #ff8a4a; }
+  .theme-chip[data-t="sakura"]  { --chip: radial-gradient(circle at 35% 30%, #ffd0dc, #c44a72); color: #ff90b0; }
 
   /* AlterU watermark, bottom-left */
   .watermark {
@@ -184,10 +211,15 @@
   <canvas id="drip"></canvas>
   <canvas id="frost"></canvas>
 
-  <div class="theme-dots" id="themeDots">
-    <div class="dot" data-t="vanity"></div>
-    <div class="dot active" data-t="rain"></div>
-    <div class="dot" data-t="winter"></div>
+  <div class="theme-strip" id="themeStrip">
+    <div class="theme-strip__inner">
+      <div class="theme-chip" data-t="vanity"></div>
+      <div class="theme-chip active" data-t="rain"></div>
+      <div class="theme-chip" data-t="winter"></div>
+      <div class="theme-chip" data-t="aquarium"></div>
+      <div class="theme-chip" data-t="sunset"></div>
+      <div class="theme-chip" data-t="sakura"></div>
+    </div>
   </div>
 
   <div class="hud-bottom">
@@ -466,7 +498,7 @@
   const frostCtx = frost.getContext('2d');
   const titleEl  = document.getElementById('title');
   const countEl  = document.getElementById('count');
-  const themeDots = document.getElementById('themeDots');
+  const themeStrip = document.getElementById('themeStrip');
 
   let W = 0, H = 0, DPR = 1;
   let drops = [];        // running water droplets on the glass
@@ -514,6 +546,42 @@
       stepParticles: stepWinterParticles,
       drawParticles: drawWinterParticles,
       initParticles: () => { particles = []; for (let i = 0; i < 60; i++) particles.push(spawnSnow()); },
+    },
+    aquarium: {
+      label: 'Aquarium',
+      bodyBg: '#04141a',
+      frostTint: [225, 240, 248],
+      frostAlpha: 0.84,
+      drip: { color: 'rgba(140, 220, 240, 0.55)', interval: 90 },
+      ambient: 'underwater',
+      paintBg: paintAquarium,
+      stepParticles: stepBubbles,
+      drawParticles: drawBubbles,
+      initParticles: () => { particles = []; for (let i = 0; i < 70; i++) particles.push(spawnBubble()); },
+    },
+    sunset: {
+      label: 'Sunset Palms',
+      bodyBg: '#1a0c10',
+      frostTint: [255, 220, 200],
+      frostAlpha: 0.80,
+      drip: { color: 'rgba(255, 180, 130, 0.55)', interval: 140 },
+      ambient: 'pad-warm',
+      paintBg: paintSunset,
+      stepParticles: stepDust,
+      drawParticles: drawDust,
+      initParticles: () => { particles = []; for (let i = 0; i < 55; i++) particles.push(spawnDustWarm()); },
+    },
+    sakura: {
+      label: 'Cherry Blossom',
+      bodyBg: '#22141a',
+      frostTint: [253, 232, 240],
+      frostAlpha: 0.84,
+      drip: { color: 'rgba(255, 200, 220, 0.55)', interval: 160 },
+      ambient: 'pad-soft',
+      paintBg: paintSakura,
+      stepParticles: stepPetals,
+      drawParticles: drawPetals,
+      initParticles: () => { particles = []; for (let i = 0; i < 50; i++) particles.push(spawnPetal()); },
     },
   };
   let theme = THEMES.vanity;
@@ -742,6 +810,243 @@
     c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
   }
 
+  /* === AQUARIUM === blue-green deep water + soft caustics + fish silhouettes */
+  function paintAquarium(c, w, h) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#02141d');
+    g.addColorStop(0.35, '#0a3245');
+    g.addColorStop(0.65, '#157090');
+    g.addColorStop(1,    '#2db1c0');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Sun caustics — bright rays from above
+    for (let i = 0; i < 5; i++) {
+      const cx = w * (0.10 + i * 0.20 + (i * 0.07));
+      const cy = -h * 0.1;
+      const beam = c.createLinearGradient(cx, cy, cx + 40, h * 0.7);
+      beam.addColorStop(0,   'rgba(170, 250, 255, 0.20)');
+      beam.addColorStop(0.4, 'rgba(150, 220, 240, 0.08)');
+      beam.addColorStop(1,   'rgba(120, 200, 230, 0)');
+      c.fillStyle = beam;
+      c.beginPath();
+      c.moveTo(cx - 30, cy);
+      c.lineTo(cx + 30, cy);
+      c.lineTo(cx + 120, h * 0.75);
+      c.lineTo(cx - 120, h * 0.75);
+      c.closePath();
+      c.fill();
+    }
+
+    // Sandy floor
+    const sand = c.createLinearGradient(0, h * 0.85, 0, h);
+    sand.addColorStop(0, 'rgba(50, 38, 28, 0.7)');
+    sand.addColorStop(1, 'rgba(140, 110, 80, 0.85)');
+    c.fillStyle = sand;
+    c.beginPath();
+    c.moveTo(0, h * 0.92);
+    c.bezierCurveTo(w * 0.3, h * 0.88, w * 0.7, h * 0.94, w, h * 0.9);
+    c.lineTo(w, h); c.lineTo(0, h); c.closePath();
+    c.fill();
+
+    // Coral / seaweed silhouettes
+    c.fillStyle = '#062028';
+    for (let i = 0; i < 6; i++) {
+      const bx = w * (0.05 + i * 0.18 + ((i * 0.07) % 0.08));
+      const by = h * 0.92;
+      c.beginPath();
+      c.moveTo(bx - 6, by);
+      c.bezierCurveTo(bx - 14, by - 30, bx - 4, by - 50, bx + 2, by - 70);
+      c.bezierCurveTo(bx + 14, by - 50, bx + 12, by - 30, bx + 8, by);
+      c.closePath();
+      c.fill();
+    }
+
+    // Fish silhouettes — small + bright
+    const fish = [
+      { x: 0.18, y: 0.42, sc: 16, col: '#ffd24a', flip: 0 },
+      { x: 0.46, y: 0.55, sc: 22, col: '#ff7a55', flip: 1 },
+      { x: 0.74, y: 0.38, sc: 18, col: '#5fc8d6', flip: 0 },
+      { x: 0.32, y: 0.68, sc: 12, col: '#ffd24a', flip: 1 },
+      { x: 0.62, y: 0.72, sc: 14, col: '#ff5fbf', flip: 0 },
+    ];
+    fish.forEach(f => {
+      const fx = f.x * w, fy = f.y * h, s = f.sc;
+      c.save();
+      c.translate(fx, fy);
+      if (f.flip) c.scale(-1, 1);
+      // body
+      c.fillStyle = f.col;
+      c.beginPath();
+      c.ellipse(0, 0, s, s * 0.55, 0, 0, Math.PI * 2);
+      c.fill();
+      // tail
+      c.beginPath();
+      c.moveTo(-s, 0);
+      c.lineTo(-s * 1.6, -s * 0.45);
+      c.lineTo(-s * 1.6, s * 0.45);
+      c.closePath();
+      c.fill();
+      // eye
+      c.fillStyle = '#000';
+      c.beginPath(); c.arc(s * 0.5, -s * 0.1, 1.6, 0, Math.PI * 2); c.fill();
+      c.restore();
+    });
+
+    // Subtle horizontal water tint overlay
+    const water = c.createLinearGradient(0, 0, 0, h);
+    water.addColorStop(0,   'rgba(20, 60, 90, 0.18)');
+    water.addColorStop(0.5, 'rgba(30, 100, 130, 0.10)');
+    water.addColorStop(1,   'rgba(20, 60, 90, 0.20)');
+    c.fillStyle = water; c.fillRect(0, 0, w, h);
+  }
+
+  /* === SUNSET PALMS === deep orange/magenta sky + palm silhouettes */
+  function paintSunset(c, w, h) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#1a0628');
+    g.addColorStop(0.30, '#641a4a');
+    g.addColorStop(0.55, '#d04030');
+    g.addColorStop(0.78, '#ffa830');
+    g.addColorStop(1,    '#ffd870');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Sun disc
+    const sx = w * 0.55, sy = h * 0.62;
+    const sun = c.createRadialGradient(sx, sy, 0, sx, sy, w * 0.55);
+    sun.addColorStop(0,    'rgba(255, 255, 240, 0.95)');
+    sun.addColorStop(0.10, 'rgba(255, 245, 200, 0.85)');
+    sun.addColorStop(0.30, 'rgba(255, 200, 100, 0.45)');
+    sun.addColorStop(0.60, 'rgba(255, 150, 80, 0.15)');
+    sun.addColorStop(1,    'rgba(255, 100, 60, 0)');
+    c.fillStyle = sun; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#fff8d0';
+    c.beginPath(); c.arc(sx, sy, w * 0.085, 0, Math.PI * 2); c.fill();
+
+    // Horizon stripe (gold)
+    c.fillStyle = 'rgba(255, 200, 100, 0.45)';
+    c.fillRect(0, h * 0.72, w, 3);
+
+    // Ocean / road suggestion
+    const ocean = c.createLinearGradient(0, h * 0.74, 0, h);
+    ocean.addColorStop(0,   'rgba(40, 12, 30, 0.55)');
+    ocean.addColorStop(0.5, 'rgba(120, 40, 40, 0.55)');
+    ocean.addColorStop(1,   'rgba(180, 90, 50, 0.85)');
+    c.fillStyle = ocean; c.fillRect(0, h * 0.74, w, h);
+
+    // Palm tree silhouettes
+    function drawPalm(c, x, baseY, height, leftLean) {
+      c.fillStyle = '#0a0408';
+      // trunk
+      c.beginPath();
+      c.moveTo(x - 3, baseY);
+      c.quadraticCurveTo(x + leftLean * 10, baseY - height * 0.5, x + leftLean * 22, baseY - height);
+      c.lineTo(x + leftLean * 22 + 4, baseY - height);
+      c.quadraticCurveTo(x + leftLean * 10 + 4, baseY - height * 0.5, x + 1, baseY);
+      c.closePath();
+      c.fill();
+      // fronds — 7 leaves
+      const topx = x + leftLean * 22 + 2, topy = baseY - height;
+      for (let i = 0; i < 7; i++) {
+        const ang = (-Math.PI / 2) + (i - 3) * 0.45 + leftLean * 0.1;
+        const len = height * 0.45;
+        c.beginPath();
+        c.moveTo(topx, topy);
+        c.quadraticCurveTo(
+          topx + Math.cos(ang) * len * 0.6,
+          topy + Math.sin(ang) * len * 0.6 - 8,
+          topx + Math.cos(ang) * len,
+          topy + Math.sin(ang) * len + 12,
+        );
+        c.lineWidth = 4;
+        c.strokeStyle = '#0a0408';
+        c.stroke();
+      }
+    }
+    drawPalm(c, w * 0.12, h * 0.96, h * 0.42, 1);
+    drawPalm(c, w * 0.86, h * 0.96, h * 0.46, -1);
+    drawPalm(c, w * 0.04, h * 0.96, h * 0.32, 1);
+  }
+
+  /* === SAKURA === pink cottagecore sky + dark cherry-tree silhouette */
+  function paintSakura(c, w, h) {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#a06088');
+    g.addColorStop(0.32, '#d889a7');
+    g.addColorStop(0.55, '#f5b8c5');
+    g.addColorStop(0.80, '#f9dae0');
+    g.addColorStop(1,    '#f1c0c8');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Soft sun blush
+    const sx = w * 0.30, sy = h * 0.38;
+    const blush = c.createRadialGradient(sx, sy, 0, sx, sy, w * 0.55);
+    blush.addColorStop(0,   'rgba(255, 240, 245, 0.55)');
+    blush.addColorStop(0.4, 'rgba(255, 215, 225, 0.25)');
+    blush.addColorStop(1,   'rgba(255, 210, 220, 0)');
+    c.fillStyle = blush; c.fillRect(0, 0, w, h);
+
+    // Distant pink mountain
+    c.fillStyle = 'rgba(110, 60, 90, 0.55)';
+    c.beginPath();
+    c.moveTo(0, h * 0.72);
+    c.lineTo(w * 0.25, h * 0.55);
+    c.lineTo(w * 0.45, h * 0.68);
+    c.lineTo(w * 0.62, h * 0.50);
+    c.lineTo(w * 0.85, h * 0.66);
+    c.lineTo(w, h * 0.60);
+    c.lineTo(w, h);
+    c.lineTo(0, h);
+    c.closePath();
+    c.fill();
+
+    // Foreground cherry tree
+    c.fillStyle = '#180812';
+    // trunk
+    c.beginPath();
+    c.moveTo(w * 0.18, h);
+    c.bezierCurveTo(w * 0.20, h * 0.85, w * 0.22, h * 0.7, w * 0.28, h * 0.62);
+    c.lineTo(w * 0.31, h * 0.62);
+    c.bezierCurveTo(w * 0.25, h * 0.72, w * 0.24, h * 0.86, w * 0.23, h);
+    c.closePath();
+    c.fill();
+    // upper branches — fine strokes
+    c.strokeStyle = '#180812';
+    c.lineWidth = 3;
+    function branch(x, y, ang, len, depth) {
+      if (depth <= 0 || len < 6) return;
+      const x2 = x + Math.cos(ang) * len;
+      const y2 = y + Math.sin(ang) * len;
+      c.lineWidth = Math.max(1, depth * 0.9);
+      c.beginPath();
+      c.moveTo(x, y); c.lineTo(x2, y2);
+      c.stroke();
+      branch(x2, y2, ang - 0.4, len * 0.65, depth - 1);
+      branch(x2, y2, ang + 0.4, len * 0.65, depth - 1);
+    }
+    branch(w * 0.295, h * 0.62, -Math.PI/2 + 0.2, h * 0.18, 5);
+    branch(w * 0.295, h * 0.62, -Math.PI/2 - 0.4, h * 0.14, 5);
+
+    // Pink blossom clusters on the branches
+    c.fillStyle = '#ffb8d0';
+    for (let i = 0; i < 18; i++) {
+      const x = w * 0.16 + Math.random() * w * 0.32;
+      const y = h * 0.18 + Math.random() * h * 0.38;
+      const r = 12 + Math.random() * 18;
+      const grad = c.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0,   'rgba(255, 200, 215, 0.75)');
+      grad.addColorStop(0.5, 'rgba(255, 165, 195, 0.45)');
+      grad.addColorStop(1,   'rgba(255, 165, 195, 0)');
+      c.fillStyle = grad;
+      c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+
+    // Subtle warm vignette bottom
+    const vig = c.createLinearGradient(0, h * 0.85, 0, h);
+    vig.addColorStop(0, 'rgba(80, 30, 50, 0)');
+    vig.addColorStop(1, 'rgba(80, 30, 50, 0.35)');
+    c.fillStyle = vig; c.fillRect(0, 0, w, h);
+  }
+
   /* ============ THEME PARTICLES (rain streaks / snow / warm dust) ============ */
   function spawnDust() {
     return {
@@ -822,6 +1127,115 @@
     particles.forEach(p => {
       c.fillStyle = `rgba(255, 255, 255, ${p.a})`;
       c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+    });
+    c.restore();
+  }
+
+  /* === Aquarium bubbles === */
+  function spawnBubble() {
+    return {
+      x: Math.random() * W,
+      y: H + Math.random() * H * 0.4,
+      vy: -(0.4 + Math.random() * 0.9),
+      drift: 0.3 + Math.random() * 0.5,
+      phase: Math.random() * Math.PI * 2,
+      r: 1.5 + Math.random() * 3.5,
+      a: 0.35 + Math.random() * 0.45,
+    };
+  }
+  function stepBubbles(dt) {
+    particles.forEach(p => {
+      p.phase += 0.025;
+      p.x += Math.sin(p.phase) * p.drift * 0.2;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+    });
+  }
+  function drawBubbles(c) {
+    c.save();
+    particles.forEach(p => {
+      const grad = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      grad.addColorStop(0,   `rgba(200, 250, 255, ${p.a})`);
+      grad.addColorStop(0.7, `rgba(180, 230, 240, ${p.a * 0.3})`);
+      grad.addColorStop(1,   'rgba(180, 230, 240, 0)');
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+      // bright glint
+      c.fillStyle = `rgba(255, 255, 255, ${p.a})`;
+      c.beginPath(); c.arc(p.x - p.r * 0.3, p.y - p.r * 0.4, p.r * 0.25, 0, Math.PI * 2); c.fill();
+    });
+    c.restore();
+  }
+
+  /* === Sunset dust === warm motes drifting up */
+  function spawnDustWarm() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.12,
+      vy: -0.04 - Math.random() * 0.14,
+      r: 0.8 + Math.random() * 1.8,
+      a: 0.25 + Math.random() * 0.4,
+    };
+  }
+  function stepDust(dt) {
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y < -8) { p.y = H + 8; p.x = Math.random() * W; }
+      if (p.x < -8) p.x = W + 8;
+      if (p.x > W + 8) p.x = -8;
+    });
+  }
+  function drawDust(c) {
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    particles.forEach(p => {
+      c.fillStyle = `rgba(255, 200, 150, ${p.a})`;
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+    });
+    c.restore();
+  }
+
+  /* === Sakura petals === */
+  function spawnPetal() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vy: 0.4 + Math.random() * 0.6,
+      drift: 0.5 + Math.random() * 0.8,
+      phase: Math.random() * Math.PI * 2,
+      rot: Math.random() * Math.PI * 2,
+      vrot: (Math.random() - 0.5) * 0.04,
+      r: 3.5 + Math.random() * 3.5,
+      a: 0.6 + Math.random() * 0.35,
+    };
+  }
+  function stepPetals(dt) {
+    particles.forEach(p => {
+      p.phase += 0.022;
+      p.x += Math.sin(p.phase) * p.drift * 0.35;
+      p.y += p.vy;
+      p.rot += p.vrot;
+      if (p.y > H + 8) { p.y = -10; p.x = Math.random() * W; }
+    });
+  }
+  function drawPetals(c) {
+    c.save();
+    particles.forEach(p => {
+      c.save();
+      c.translate(p.x, p.y);
+      c.rotate(p.rot);
+      c.fillStyle = `rgba(255, 190, 210, ${p.a})`;
+      // simple petal: ellipse with notch
+      c.beginPath();
+      c.ellipse(0, 0, p.r, p.r * 0.6, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = `rgba(255, 220, 230, ${p.a * 0.7})`;
+      c.beginPath();
+      c.ellipse(0, -p.r * 0.2, p.r * 0.5, p.r * 0.3, 0, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
     });
     c.restore();
   }
@@ -920,34 +1334,70 @@
     c.restore();
   }
 
-  /* ---------- wipe (destination-out with feathered brush) ---------- */
+  /* ---------- wipe (destination-out with dynamic feathered brush) ---------- */
   let lastPt = null;
   let prevPt = null;
-  function wipeAt(x, y, pressure = 1) {
+  let holdStart = 0;      // pointerdown timestamp for hold-to-fatten
+  let holdAnchor = null;  // anchor position of hold (stays as long as finger doesn't move much)
+  const MIN_R = 18, MAX_R = 64;
+
+  function computeRadius(x, y, speedPxPerMs, pressure, nowMs) {
+    // Speed factor: slow drag = wide brush, fast swipe = narrow.
+    // < 0.2 px/ms → ~38, > 1.6 px/ms → 18
+    const sf = Math.max(0, Math.min(1, (1.6 - speedPxPerMs) / 1.4));
+    let r = 18 + sf * 22;     // 18..40
+
+    // Pressure (Apple Pencil, future devices) — clamp pressure to (0.5..1.5)
+    if (pressure > 0 && pressure !== 0.5) {
+      r *= (0.75 + pressure * 0.5);
+    }
+
+    // Hold-to-fatten: anchor stays still → grow over up to 900ms to MAX_R
+    if (holdAnchor) {
+      const dxh = x - holdAnchor.x, dyh = y - holdAnchor.y;
+      const drift = Math.hypot(dxh, dyh);
+      if (drift < 14) {
+        const heldMs = nowMs - holdStart;
+        const t = Math.min(1, heldMs / 900);
+        // Ease-out cubic
+        const ease = 1 - Math.pow(1 - t, 3);
+        const fat = 22 * ease;
+        r += fat;
+      } else {
+        // moved → reset anchor at new spot (but keep recent start time so quick re-still still fattens fast)
+        holdAnchor = { x, y };
+        holdStart = nowMs - 200;
+      }
+    }
+
+    return Math.max(MIN_R, Math.min(MAX_R, r));
+  }
+
+  function wipeAt(x, y, radius) {
     const c = frostCtx;
     c.save();
     c.globalCompositeOperation = 'destination-out';
-    const radius = 26 * (0.85 + 0.3 * pressure);
 
     if (lastPt) {
-      // segment: stroke a tapered line from lastPt to (x,y)
       const dx = x - lastPt.x, dy = y - lastPt.y;
       const dist = Math.hypot(dx, dy);
-      const steps = Math.max(1, Math.floor(dist / (radius * 0.45)));
+      const steps = Math.max(1, Math.floor(dist / (radius * 0.42)));
+      // Smoothly lerp the radius along the segment if it changes (gives a tapered brush feel)
+      const r0 = (lastPt.r != null) ? lastPt.r : radius;
       for (let i = 1; i <= steps; i++) {
-        const px = lastPt.x + (dx * i) / steps;
-        const py = lastPt.y + (dy * i) / steps;
-        const grad = c.createRadialGradient(px, py, 0, px, py, radius);
+        const f = i / steps;
+        const px = lastPt.x + dx * f;
+        const py = lastPt.y + dy * f;
+        const r  = r0 + (radius - r0) * f;
+        const grad = c.createRadialGradient(px, py, 0, px, py, r);
         grad.addColorStop(0,    'rgba(0,0,0,1)');
         grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
         grad.addColorStop(1,    'rgba(0,0,0,0)');
         c.fillStyle = grad;
-        c.beginPath(); c.arc(px, py, radius, 0, Math.PI * 2); c.fill();
-        // accumulate score — proportional to wiped area, scaled down
-        lifetime += radius * radius * 0.0025;
+        c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill();
+        lifetime += r * r * 0.0025;
       }
     } else {
-      // single tap
       const grad = c.createRadialGradient(x, y, 0, x, y, radius);
       grad.addColorStop(0,    'rgba(0,0,0,1)');
       grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
@@ -959,7 +1409,7 @@
     c.restore();
 
     prevPt = lastPt;
-    lastPt = { x, y };
+    lastPt = { x, y, r: radius };
   }
 
   /* ---------- slow refrost ---------- */
@@ -1093,7 +1543,6 @@
     g.connect(master);
 
     if (theme.ambient === 'rain') {
-      // pink-noise rain through low-pass
       const src = actx.createBufferSource();
       src.buffer = noiseBuf; src.loop = true;
       const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
@@ -1109,6 +1558,30 @@
       src.connect(hp); hp.connect(lp); lp.connect(g);
       src.start();
       ambientNodes = { g, src, _peak: 0.22 };
+    } else if (theme.ambient === 'underwater') {
+      // muffled deep rumble + occasional plink-suggested noise
+      const src = actx.createBufferSource();
+      src.buffer = noiseBuf; src.loop = true;
+      const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 360;
+      const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 40;
+      src.connect(hp); hp.connect(lp); lp.connect(g);
+      // a deep bass sine doubling
+      const bass = actx.createOscillator(); bass.type = 'sine'; bass.frequency.value = 65;
+      const bg = actx.createGain(); bg.gain.value = 0.5;
+      bass.connect(bg); bg.connect(g);
+      src.start(); bass.start();
+      ambientNodes = { g, src, bass, _peak: 0.28 };
+    } else if (theme.ambient === 'pad-soft') {
+      // higher, brighter pad — for sakura
+      const o1 = actx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 165;
+      const o2 = actx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 247.5;
+      const o3 = actx.createOscillator(); o3.type = 'sine'; o3.frequency.value = 330.5;
+      const mix = actx.createGain(); mix.gain.value = 0.32;
+      o1.connect(mix); o2.connect(mix); o3.connect(mix);
+      const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 1100;
+      mix.connect(filt); filt.connect(g);
+      o1.start(); o2.start(); o3.start();
+      ambientNodes = { g, o1, o2, o3, _peak: 0.16 };
     } else {
       // pad-warm: two detuned sines + tiny noise tail
       const o1 = actx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 110;
@@ -1116,7 +1589,6 @@
       const o3 = actx.createOscillator(); o3.type = 'sine'; o3.frequency.value = 220.5;
       const mix = actx.createGain(); mix.gain.value = 0.4;
       o1.connect(mix); o2.connect(mix); o3.connect(mix);
-      // gentle filter sweep using LFO
       const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 800;
       mix.connect(filt); filt.connect(g);
       o1.start(); o2.start(); o3.start();
@@ -1144,8 +1616,9 @@
     setTimeout(scheduleAmbientBreath, (rise + hold + fall + silent) * 1000);
   }
 
-  // Squeak SFX: short filtered noise burst, throttled, max 4 voices
-  function playSqueak(speed) {
+  // Squeak SFX: short filtered noise burst, throttled, max 4 voices.
+  // Wider brush → lower-pitched, longer, breathier squeak (like pressing harder).
+  function playSqueak(speed, radius = 26) {
     if (!actx || actx.state !== 'running') return;
     const now = performance.now();
     if (now - lastSqueak < 110) return;
@@ -1155,18 +1628,21 @@
     try {
       const src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = false;
       const bp = actx.createBiquadFilter(); bp.type = 'bandpass';
-      bp.frequency.value = 1800 + Math.min(2400, speed * 35);
-      bp.Q.value = 6;
+      // Wider brush → lower band-pass center (deeper squeak)
+      const radFactor = Math.max(0, Math.min(1, (radius - 18) / 46));   // 0..1
+      const baseFreq = 2400 - radFactor * 1300;                          // narrow→2400, wide→1100
+      bp.frequency.value = baseFreq + Math.min(2400, speed * 30);
+      bp.Q.value = 5 - radFactor * 1.5;
       const g = actx.createGain(); g.gain.value = 0;
       const t = actx.currentTime;
-      const amp = Math.min(0.22, 0.05 + speed * 0.0035);
+      const amp = Math.min(0.24, 0.05 + speed * 0.003 + radFactor * 0.05);
+      const len = 0.18 + radFactor * 0.16;                               // wider = longer tail
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(amp, t + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
       src.connect(bp); bp.connect(g); g.connect(master);
-      // randomize start offset for variation
       src.start(t, Math.random() * 1.5);
-      src.stop(t + 0.22);
+      src.stop(t + len + 0.04);
       src.onended = () => { voicesAlive = Math.max(0, voicesAlive - 1); };
     } catch (_) { voicesAlive = Math.max(0, voicesAlive - 1); }
   }
@@ -1208,16 +1684,18 @@
     }
     initAudio();
     if (actx && actx.state !== 'running') {
-      // Single resume; if it doesn't run, first squeak is silent — fine.
       try { actx.resume(); } catch (_) {}
     }
     const r = frost.getBoundingClientRect();
     const x = (e.clientX - r.left);
     const y = (e.clientY - r.top);
-    wipeAt(x, y, 1);
+    const now = performance.now();
+    holdStart = now; holdAnchor = { x, y };
+    const radius = computeRadius(x, y, 0.4, e.pressure || 0, now);
+    wipeAt(x, y, radius);
     bumpCount();
     spawnDrip(x, y, 0);
-    lastMoveTime = performance.now();
+    lastMoveTime = now;
     lastMovePos = { x, y };
   }
 
@@ -1234,18 +1712,20 @@
       const dx = x - lastMovePos.x, dy = y - lastMovePos.y;
       speed = Math.hypot(dx, dy) / Math.max(1, (now - lastMoveTime));
     }
+    const radius = computeRadius(x, y, speed, e.pressure || 0, now);
     lastMovePos = { x, y };
     lastMoveTime = now;
-    wipeAt(x, y, 1);
-    playSqueak(speed);
-    // Occasionally seed a drip along the wipe
-    if (Math.random() < 0.05) spawnDrip(x, y, prevPt ? (x - prevPt.x) : 0);
+    wipeAt(x, y, radius);
+    playSqueak(speed, radius);
+    // Wider brush → more drips
+    if (Math.random() < 0.04 + radius * 0.001) spawnDrip(x, y, prevPt ? (x - prevPt.x) : 0);
     bumpCount();
   }
 
   function onUp() {
     pointerActive = false;
     lastPt = null; prevPt = null;
+    holdAnchor = null;
     flushScore();
   }
 
@@ -1339,8 +1819,8 @@
     drops = [];
     // refrost
     fillFrost();
-    // update theme dots
-    themeDots.querySelectorAll('.dot').forEach(d => {
+    // update theme chips
+    themeStrip.querySelectorAll('.theme-chip').forEach(d => {
       d.classList.toggle('active', d.dataset.t === name);
     });
     // restart ambient
@@ -1351,14 +1831,16 @@
     try { localStorage.setItem('frosted_window_theme', name); } catch (_) {}
   }
 
-  themeDots.addEventListener('pointerdown', e => {
-    const dot = e.target.closest('.dot');
-    if (!dot) return;
-    const t = dot.dataset.t;
+  themeStrip.addEventListener('pointerdown', e => {
+    const chip = e.target.closest('.theme-chip');
+    if (!chip) return;
+    const t = chip.dataset.t;
     if (t && t !== themeName) {
       initAudio();
       if (actx && actx.state !== 'running') { try { actx.resume(); } catch (_) {} }
       applyTheme(t);
+      // scroll into view
+      chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
   });
 
@@ -1411,20 +1893,20 @@
     for (let i = 0; i <= N; i++) {
       const t = (i / N) * Math.PI * 6;
       const rad = r0 * (0.22 + 0.78 * (i / N));
-      wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 1);
+      wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 44);
     }
     lastPt = null;
     const sweepY = H * 0.42;
     const sweepW = W * 0.65;
     for (let i = 0; i <= 36; i++) {
       const fx = W * 0.5 - sweepW * 0.5 + (sweepW * i / 36);
-      wipeAt(fx, sweepY + Math.sin(i * 0.4) * 8, 1);
+      wipeAt(fx, sweepY + Math.sin(i * 0.4) * 8, 40);
     }
     lastPt = null;
   }
   if (isPoster) {
     document.querySelector('.hud-bottom').style.display = 'none';
-    document.querySelector('.theme-dots').style.display = 'none';
+    document.querySelector('.theme-strip').style.display = 'none';
     document.querySelector('.watermark').style.display = 'none';
     document.getElementById('posterOverlay').style.display = 'block';
     doPosterWipe();           // synchronous — fires after applyTheme/fillFrost
@@ -1435,14 +1917,13 @@
   if (demo === 'heart') {
     setTimeout(() => {
       const cx = W * 0.5, cy = H * 0.46, scale = Math.min(W, H) * 0.22;
-      // parametric heart: x = 16 sin^3 t, y = -(13 cos t - 5 cos 2t - 2 cos 3t - cos 4t)
       const N = 110;
       lastPt = null;
       for (let i = 0; i <= N; i++) {
         const t = (i / N) * Math.PI * 2;
         const hx = 16 * Math.pow(Math.sin(t), 3);
         const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-        wipeAt(cx + hx * scale / 16, cy + hy * scale / 16, 1);
+        wipeAt(cx + hx * scale / 16, cy + hy * scale / 16, 30);
       }
       lastPt = null;
     }, 100);
@@ -1453,13 +1934,12 @@
       const N = 80;
       for (let i = 0; i <= N; i++) {
         const t = (i / N) * Math.PI * 2;
-        wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 1);
+        wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 30);
       }
-      // fill inside
       for (let r = rad; r > 0; r -= 18) {
         for (let i = 0; i < 20; i++) {
           const t = (i / 20) * Math.PI * 2;
-          wipeAt(cx + Math.cos(t) * r, cy + Math.sin(t) * r, 1);
+          wipeAt(cx + Math.cos(t) * r, cy + Math.sin(t) * r, 30);
         }
       }
       lastPt = null;
