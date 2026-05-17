@@ -150,8 +150,8 @@
   .wipe-hint.gone { opacity: 0; }
   .ghost-finger {
     position: absolute;
-    width: 38px; height: 52px;
-    transform-origin: 50% 28%;
+    width: 56px; height: 56px;
+    transform-origin: 50% 30%;
     will-change: transform, opacity;
     pointer-events: none;
     opacity: 0;
@@ -160,16 +160,14 @@
   .ghost-finger.show { opacity: 1; }
   .ghost-finger svg {
     width: 100%; height: 100%;
-    fill: none;
-    /* Dark stroke is visible on white frost; bright outer glow keeps it
-       visible if the user has wiped to a darker scene underneath. */
-    stroke: rgba(40, 40, 56, 0.90);
-    stroke-width: 2.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    /* Material Symbols paths are filled shapes, not strokes */
+    fill: rgba(30, 32, 44, 0.92);
+    /* Bright halo keeps the dark fill visible if the player has wiped
+       through to a darker revealed scene underneath */
     filter:
-      drop-shadow(0 0 4px rgba(255, 255, 255, 0.85))
-      drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+      drop-shadow(0 0 5px rgba(255, 255, 255, 0.95))
+      drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+      drop-shadow(0 2px 3px rgba(0, 0, 0, 0.30));
   }
   /* Ripple under fingertip while wiping */
   .ghost-finger__ripple {
@@ -307,18 +305,10 @@
   <div class="wipe-hint" id="wipeHint">
     <div class="wipe-hint__label" id="wipeHintLabel">Drag to wipe</div>
     <div class="ghost-finger" id="ghostFinger">
-      <svg viewBox="0 0 38 52" aria-hidden="true">
-        <!-- thumb stub -->
-        <path d="M6 30 L4 26 L4 22 L7 21" />
-        <!-- index finger pointing up to fingertip ring -->
-        <path d="M14 24 L14 12 a4 4 0 0 1 8 0 L22 24" />
-        <!-- palm + 3 fingers folded -->
-        <path d="M6 30 L6 42 a6 6 0 0 0 6 6 L24 48 a6 6 0 0 0 6 -6 L30 26 a3 3 0 0 0 -6 0 L24 26 L24 24" />
-        <!-- knuckle lines on folded fingers -->
-        <path d="M22 32 L30 32" />
-        <path d="M22 38 L30 38" />
+      <!-- Material Icons — touch_app (Google, Apache 2.0) -->
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.92-1.38z"/>
       </svg>
-      <div class="ghost-finger__ripple"></div>
     </div>
   </div>
 
