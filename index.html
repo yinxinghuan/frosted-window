@@ -1503,7 +1503,7 @@
     return Math.max(MIN_R, Math.min(MAX_R, r));
   }
 
-  function wipeAt(x, y, radius) {
+  function wipeAt(x, y, radius, isDemo = false) {
     const c = frostCtx;
     c.save();
     c.globalCompositeOperation = 'destination-out';
@@ -1512,7 +1512,6 @@
       const dx = x - lastPt.x, dy = y - lastPt.y;
       const dist = Math.hypot(dx, dy);
       const steps = Math.max(1, Math.floor(dist / (radius * 0.42)));
-      // Smoothly lerp the radius along the segment if it changes (gives a tapered brush feel)
       const r0 = (lastPt.r != null) ? lastPt.r : radius;
       for (let i = 1; i <= steps; i++) {
         const f = i / steps;
@@ -1525,7 +1524,7 @@
         grad.addColorStop(1,    'rgba(0,0,0,0)');
         c.fillStyle = grad;
         c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill();
-        lifetime += r * r * 0.0025;
+        if (!isDemo) lifetime += r * r * 0.0025;
       }
     } else {
       const grad = c.createRadialGradient(x, y, 0, x, y, radius);
@@ -1534,7 +1533,7 @@
       grad.addColorStop(1,    'rgba(0,0,0,0)');
       c.fillStyle = grad;
       c.beginPath(); c.arc(x, y, radius, 0, Math.PI * 2); c.fill();
-      lifetime += radius * radius * 0.005;
+      if (!isDemo) lifetime += radius * radius * 0.005;
     }
     c.restore();
 
@@ -1812,9 +1811,8 @@
       countEl.classList.remove('hint');
       countEl.style.display = '';
       countEl.textContent = formatScore(lifetime);
-      // fade out the centered wipe hint + remember they've seen it
+      // fade out the centered wipe hint on first real touch
       if (wipeHintEl) wipeHintEl.classList.add('gone');
-      markIntroSeen();
     }
     initAudio();
     if (actx && actx.state !== 'running') {
@@ -2015,36 +2013,17 @@
                     : 'rain';
   applyTheme(startTheme);
 
-  const forceIntro = new URLSearchParams(window.location.search).get('intro') === '1';
-  // Bump this whenever the intro UX changes; players who haven't seen
-  // the current version will be re-greeted with the demo on next visit.
-  const INTRO_VERSION = 'v2';
-  const INTRO_KEY = 'frosted_window_intro_seen';
-  let introSeen = '';
-  try { introSeen = localStorage.getItem(INTRO_KEY) || ''; } catch (_) {}
-  const needsIntro = forceIntro || introSeen !== INTRO_VERSION;
-
-  if (lifetime > 0 && !needsIntro) {
-    countEl.classList.remove('hint');
-    countEl.style.display = '';
-    countEl.textContent = formatScore(lifetime);
-    firstTouch = true;
-    // Returning player who has seen the current intro — skip it
-    if (wipeHintEl) wipeHintEl.style.display = 'none';
-  } else if (!isPoster) {
-    // First-time visitor OR returning player who hasn't seen the new intro
+  // Always greet the player with the demo wipe on entry — it doubles as
+  // an ambient intro animation for this sensory toy. The demo strokes
+  // are flagged isDemo=true in wipeAt, so they don't accrue lifetime score.
+  if (!isPoster) {
     if (lifetime > 0) {
-      // Pre-show their lifetime in the bottom HUD; the centered demo still plays
+      // Returning player — surface their lifetime score immediately.
       countEl.classList.remove('hint');
       countEl.style.display = '';
       countEl.textContent = formatScore(lifetime);
     }
-    if (forceIntro) firstTouch = false;
     runIntroDemo();
-  }
-
-  function markIntroSeen() {
-    try { localStorage.setItem(INTRO_KEY, INTRO_VERSION); } catch (_) {}
   }
 
   function runIntroDemo() {
@@ -2081,7 +2060,7 @@
         placeGhost(x, cy, tilt);
         if (now - lastWipeT > 40) {
           lastWipeT = now;
-          wipeAt(x, cy, 32);
+          wipeAt(x, cy, 32, /* isDemo */ true);
         }
         if (f < 1) {
           requestAnimationFrame(tick);
