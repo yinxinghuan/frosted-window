@@ -2021,50 +2021,67 @@
     const ghost = document.getElementById('ghostFinger');
     const label = document.getElementById('wipeHintLabel');
     if (!ghost) return;
-    const cx = W * 0.5, cy = H * 0.50;
-    const startX = cx - Math.min(110, W * 0.25);
-    const endX   = cx + Math.min(110, W * 0.25);
-    // Fingertip sits at SVG (50%, 28%) ≈ (19, 14.6) of a 38x52 ghost
-    const TX_OFF = 19, TY_OFF = 14.6;
+    const cy = H * 0.50;
+    const startX = W * 0.5 - Math.min(110, W * 0.25);
+    const endX   = W * 0.5 + Math.min(110, W * 0.25);
+    // Material touch_app icon: fingertip sits roughly at SVG (50%, 30%);
+    // ghost is 56x56, so fingertip offset = (28, ~17)
+    const TX_OFF = 28, TY_OFF = 17;
     function placeGhost(x, y, rot = 0) {
       ghost.style.transform = `translate(${x - TX_OFF}px, ${y - TY_OFF}px) rotate(${rot}deg)`;
     }
+
     placeGhost(startX, cy, -8);
     requestAnimationFrame(() => ghost.classList.add('show'));
 
-    // Pause briefly to let user see the hand appear before it moves
-    setTimeout(() => {
+    // Single-cycle helper — slides ghost from fromX to toX. If doWipe, also
+    // strokes the frost canvas along the path.
+    function animateSlide(fromX, toX, duration, doWipe, onDone) {
       if (firstTouch) return;
-      const duration = 1800;
       const T0 = performance.now();
       let lastWipeT = 0;
-      lastPt = null;
+      if (doWipe) lastPt = null;
       const tick = (now) => {
         if (firstTouch) return;
-        const elapsed = now - T0;
-        const f = Math.min(1, elapsed / duration);
-        // ease-in-out cubic
-        const ease = f < 0.5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3) / 2;
-        const x = startX + (endX - startX) * ease;
-        const tilt = -8 + 16 * ease;     // -8° → +8°
+        const f = Math.min(1, (now - T0) / duration);
+        // Forward stroke uses ease-in-out; return uses ease-out so the hand
+        // glides back without re-asserting a "stroke" feel
+        const ease = doWipe
+          ? (f < 0.5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3) / 2)
+          : (1 - Math.pow(1 - f, 2));
+        const x = fromX + (toX - fromX) * ease;
+        const tilt = doWipe ? (-8 + 16 * ease) : 0;
         placeGhost(x, cy, tilt);
-        if (now - lastWipeT > 40) {
+        if (doWipe && now - lastWipeT > 40) {
           lastWipeT = now;
           wipeAt(x, cy, 32, /* isDemo */ true);
         }
-        if (f < 1) {
-          requestAnimationFrame(tick);
-        } else {
-          // Stroke done — show label and KEEP ghost visible until first touch.
-          // Important for preload: even if the game runs the demo while the
-          // user is still on the previous game, the ghost + label remain in
-          // place when they finally land here. They fade on first pointerdown.
-          label.classList.add('show');
-          ghost.classList.add('idle');
-        }
+        if (f < 1) requestAnimationFrame(tick);
+        else { lastPt = null; if (onDone) onDone(); }
       };
       requestAnimationFrame(tick);
-    }, 450);
+    }
+
+    function loop() {
+      if (firstTouch) return;
+      animateSlide(startX, endX, 1800, true, () => {
+        label.classList.add('show');
+        // hold at right end so the user reads "DRAG TO WIPE"
+        setTimeout(() => {
+          if (firstTouch) return;
+          // glide back to start (no wipe)
+          animateSlide(endX, startX, 700, false, () => {
+            // brief pause then re-run — this guarantees that no matter when
+            // a player lands on this game in an Aigram preload list, they
+            // will see the full swipe demo in progress within ~5 seconds
+            setTimeout(loop, 500);
+          });
+        }, 1400);
+      });
+    }
+
+    // Initial pause so the player can register the hand appearing
+    setTimeout(loop, 500);
   }
 
   // Poster mode — hide bottom HUD + show top title + wipe a big swirl (synchronous)
