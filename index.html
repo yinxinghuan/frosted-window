@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="icon" type="image/gif" href="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" />
+<title>Frosted Window</title>
+<style>
+  :root {
+    --bg: #0c0f14;
+    --accent: #ffd8b8;
+    --accent-soft: rgba(255, 216, 184, 0.55);
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--bg);
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+    overflow: hidden; touch-action: none;
+    overscroll-behavior: none;
+  }
+  body { overflow: hidden; position: relative; transition: background 0.6s ease; }
+  canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+  #bg    { z-index: 1; background: var(--bg); }
+  #drip  { z-index: 2; pointer-events: none; }
+  #frost { z-index: 3; }
+
+  /* HUD */
+  .hud-bottom {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    z-index: 20; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 16px 22px;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .hud-bottom .title {
+    font-size: 11px; letter-spacing: 0.42em; text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.45);
+    transition: color 0.5s ease;
+  }
+  .hud-bottom .count {
+    margin-top: 6px;
+    font-size: 36px; font-weight: 700; line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.4), 0 0 24px rgba(255,255,255,0.18);
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hud-bottom .count.pop { transform: scale(1.1); }
+  .hud-bottom .count.hint {
+    font-size: 12px; font-weight: 500; letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.55); text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+    animation: fw-breathe 2.6s ease-in-out infinite;
+  }
+  .hud-bottom .lb-btn {
+    margin-top: 12px;
+    width: 34px; height: 34px;
+    background: rgba(0,0,0,0.32);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 50%; color: #fff;
+    font-size: 16px; line-height: 1; padding: 0;
+    cursor: pointer; pointer-events: auto;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, background 0.5s ease, border-color 0.5s ease;
+  }
+  .hud-bottom .lb-btn:active { transform: scale(0.9); }
+
+  /* Top-right theme dots */
+  .theme-dots {
+    position: absolute; right: 14px; top: 14px;
+    display: flex; gap: 8px; padding: 8px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    pointer-events: auto; z-index: 30;
+  }
+  .theme-dots .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    cursor: pointer; opacity: 0.45;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    box-shadow: 0 0 10px currentColor;
+    border: 1px solid rgba(255,255,255,0.5);
+  }
+  .theme-dots .dot.active { opacity: 1; transform: scale(1.22); }
+  .theme-dots .dot[data-t="vanity"]  { background: #ffc9a8; color: #ffc9a8; }
+  .theme-dots .dot[data-t="rain"]    { background: #56a3ff; color: #56a3ff; }
+  .theme-dots .dot[data-t="winter"]  { background: #e6f0ff; color: #cfd8ff; }
+
+  /* AlterU watermark, bottom-left */
+  .watermark {
+    position: absolute; left: 14px; bottom: 14px;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 25;
+    width: 56px; height: auto; opacity: 0.38;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .watermark img { width: 100%; display: block; }
+
+  @keyframes fw-breathe {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+
+  /* === Leaderboard styles (shared pattern) === */
+  .gg-lb-backdrop {
+    position: absolute; inset: 0; z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.72);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .gg-lb-backdrop.show { display: flex; }
+  .gg-lb-panel {
+    width: min(92%, 400px); max-height: 80vh;
+    display: flex; flex-direction: column; gap: 12px;
+    background: rgba(14, 16, 26, 0.97);
+    border: 1px solid rgba(255, 216, 184, 0.16);
+    border-radius: 20px; padding: 18px 14px 14px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6), 0 0 28px rgba(255, 216, 184, 0.05);
+    color: #fff; font-family: inherit;
+  }
+  .gg-lb-head { display: flex; align-items: center; gap: 10px; }
+  .gg-lb-head__icon { font-size: 24px; }
+  .gg-lb-head__title { font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+  .gg-lb-head__game { font-size: 14px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; margin-top: 2px; }
+  .gg-lb-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: none; color: #fff;
+    font-size: 13px; cursor: pointer; font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .gg-lb-tabs { display: flex; gap: 6px; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 4px; }
+  .gg-lb-tab {
+    flex: 1; padding: 8px 10px; border-radius: 8px; border: none;
+    background: transparent; color: rgba(255,255,255,0.6);
+    font-family: inherit; font-size: 12px; letter-spacing: 0.04em; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .gg-lb-tab.active { background: rgba(255, 216, 184, 0.18); color: #fff; }
+  .gg-lb-body { flex: 1; overflow-y: auto; min-height: 200px; -webkit-overflow-scrolling: touch; }
+  .gg-lb-state { padding: 48px 12px; text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; }
+  .gg-lb-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 12px; margin-bottom: 4px;
+    border: 1px solid transparent;
+  }
+  .gg-lb-row.top { background: rgba(255,255,255,0.04); }
+  .gg-lb-row.me  { background: rgba(255, 216, 184, 0.16); border-color: rgba(255, 216, 184, 0.4); }
+  .gg-lb-row.clickable { cursor: pointer; }
+  .gg-lb-rank { width: 26px; text-align: center; font-weight: 700; font-size: 14px; color: rgba(255,255,255,0.45); }
+  .gg-lb-rank.medal { font-size: 20px; }
+  .gg-lb-av {
+    background: rgba(255,255,255,0.08); border-radius: 50%; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: rgba(255,255,255,0.6); flex-shrink: 0;
+  }
+  .gg-lb-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gg-lb-info { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+  .gg-lb-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+  .gg-lb-mebadge { font-size: 10px; padding: 2px 6px; border-radius: 6px; background: rgba(255, 216, 184, 0.28); color: var(--accent); }
+  .gg-lb-score { font-weight: 700; font-size: 16px; color: #fff; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <canvas id="drip"></canvas>
+  <canvas id="frost"></canvas>
+
+  <div class="theme-dots" id="themeDots">
+    <div class="dot" data-t="vanity"></div>
+    <div class="dot active" data-t="rain"></div>
+    <div class="dot" data-t="winter"></div>
+  </div>
+
+  <div class="hud-bottom">
+    <div class="title" id="title">Frosted Window</div>
+    <div class="count hint" id="count">Drag to wipe</div>
+    <button type="button" class="lb-btn" id="lbToggleBtn" aria-label="Leaderboard">🏆</button>
+  </div>
+
+  <div class="watermark"><img src="img/aigram.svg" alt="" draggable="false" /></div>
+
+  <!-- Poster overlay: only visible with ?poster=1 -->
+  <div id="posterOverlay" style="display:none; position:absolute; left:0; right:0; top:0;
+       z-index:50; pointer-events:none; text-align:center; padding-top:80px;">
+    <div style="font-size:14px; letter-spacing:0.45em; color:rgba(255,255,255,0.7);
+         text-transform:uppercase; text-shadow:0 2px 12px rgba(0,0,0,0.55);">A L T E R U</div>
+    <div style="margin-top:18px; font-size:78px; font-weight:800; letter-spacing:0.02em;
+         color:#fff; text-shadow:0 4px 24px rgba(0,0,0,0.55), 0 0 28px rgba(255,255,255,0.18);
+         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">FROSTED<br/>WINDOW</div>
+    <div style="margin-top:24px; font-size:18px; letter-spacing:0.3em;
+         color:rgba(255,255,255,0.7); text-transform:uppercase;
+         text-shadow:0 2px 10px rgba(0,0,0,0.55);">drag to wipe · the steam</div>
+  </div>
+
+<script>
+/* ========================================================================
+   Leaderboard module — submits lifetime wipe-score, shows global + friends
+   ======================================================================== */
+(function () {
+  'use strict';
+  const GAMES_API = 'https://games-api.xinghuan-yin.workers.dev';
+  const GAME_ID   = 'frosted-window';
+  const GAME_NAME = 'FROSTED WINDOW';
+
+  const params     = new URLSearchParams(window.location.search);
+  const telegramId = params.get('telegram_id') || null;
+  const rawOrigin  = params.get('api_origin');
+  const apiOrigin  = rawOrigin ? decodeURIComponent(rawOrigin) : null;
+  const isInAigram = !!(telegramId && apiOrigin);
+
+  let currentUser = null;
+  const toBase64   = s => btoa(unescape(encodeURIComponent(s)));
+  const fromBase64 = s => decodeURIComponent(escape(atob(s)));
+
+  function callAigramAPI(url) {
+    return new Promise((resolve, reject) => {
+      const id = (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random());
+      const target = new URL(apiOrigin).origin;
+      let timer;
+      const handler = (e) => {
+        if (e.origin !== target) return;
+        const msg = typeof e.data === 'string' ? e.data : '';
+        if (!msg.startsWith('callAPIResult-')) return;
+        try {
+          const r = JSON.parse(fromBase64(msg.slice('callAPIResult-'.length)));
+          if (r.request_id !== id) return;
+          window.removeEventListener('message', handler);
+          clearTimeout(timer);
+          if (r.success) resolve(r.data); else reject(new Error(r.error || 'API error'));
+        } catch (_) {}
+      };
+      window.addEventListener('message', handler);
+      window.parent.postMessage(
+        `callAPI-${toBase64(JSON.stringify({ url, method: 'GET', data: null, request_id: id, emitter: window.location.origin }))}`,
+        target
+      );
+      timer = setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('timeout')); }, 10000);
+    });
+  }
+
+  if (isInAigram) {
+    callAigramAPI(`/note/telegram/user/get/info/by/telegram_id?telegram_id=${telegramId}`)
+      .then(res => { currentUser = (res && res.data) ? res.data : res; })
+      .catch(() => {});
+  }
+
+  async function submitScore(score) {
+    if (!telegramId || !(score > 0)) return;
+    try {
+      await fetch(`${GAMES_API}/score`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          game_id: GAME_ID,
+          telegram_id: telegramId,
+          name: (currentUser && currentUser.name) || telegramId,
+          avatar_url: (currentUser && currentUser.head_url) || '',
+          score: Math.floor(score),
+        }),
+      });
+    } catch (_) {}
+  }
+
+  async function fetchGlobal() {
+    try {
+      const res = await fetch(`${GAMES_API}/leaderboard?game_id=${GAME_ID}&limit=50`);
+      const json = await res.json();
+      return (json.leaderboard || []).map(e => Object.assign({}, e, { isMe: String(e.telegram_id) === String(telegramId) }));
+    } catch (_) { return []; }
+  }
+
+  async function fetchFriends() {
+    if (!isInAigram) return [];
+    const ids = new Set([String(telegramId)]);
+    try {
+      const contacts = await callAigramAPI(`/note/telegram/user/contact/list?telegram_id=${telegramId}`);
+      const list = Array.isArray(contacts) ? contacts : (contacts && contacts.data) || [];
+      list.forEach(f => { if (f && f.telegram_id) ids.add(String(f.telegram_id)); });
+    } catch (_) {}
+    try {
+      const res = await fetch(`${GAMES_API}/leaderboard?game_id=${GAME_ID}&telegram_ids=${encodeURIComponent([...ids].join(','))}`);
+      const json = await res.json();
+      return (json.leaderboard || []).map(e => Object.assign({}, e, { isMe: String(e.telegram_id) === String(telegramId) }));
+    } catch (_) { return []; }
+  }
+
+  function openProfile(tid) {
+    if (!apiOrigin) return;
+    try {
+      const enc = btoa(JSON.stringify({ id: tid }));
+      window.parent.postMessage(`AW.PROFILE.OPEN-${enc}`, new URL(apiOrigin).origin);
+    } catch (_) {}
+  }
+
+  const zh = (navigator.language || '').toLowerCase().startsWith('zh');
+  const S = zh
+    ? { title:'排行榜', global:'🌍 全局榜', friends:'👥 好友榜', me:'我',
+        empty:'还没有人擦过这扇窗。', emptyFriends:'好友还没有人擦过。', loading:'加载中…' }
+    : { title:'Leaderboard', global:'🌍 Global', friends:'👥 Friends', me:'me',
+        empty:'No one has wiped this window yet.', emptyFriends:'No friends on the board yet.', loading:'Loading…' };
+  const MEDALS = ['🥇','🥈','🥉'];
+  const MEDAL_COLORS = ['#FFD700','#C0C0C0','#CD7F32'];
+
+  let root, body;
+  const tabs = {};
+  let currentTab = 'global';
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function build() {
+    if (root) return;
+    root = document.createElement('div');
+    root.className = 'gg-lb-backdrop';
+    root.addEventListener('pointerdown', e => { if (e.target === root) hide(); });
+
+    const panel = document.createElement('div');
+    panel.className = 'gg-lb-panel';
+    root.appendChild(panel);
+
+    const head = document.createElement('div');
+    head.className = 'gg-lb-head';
+    head.innerHTML =
+      '<span class="gg-lb-head__icon">🏆</span>' +
+      '<div style="flex:1; min-width:0">' +
+        `<div class="gg-lb-head__title">${esc(S.title)}</div>` +
+        `<div class="gg-lb-head__game">${esc(GAME_NAME)}</div>` +
+      '</div>' +
+      '<button type="button" class="gg-lb-close">✕</button>';
+    panel.appendChild(head);
+    head.querySelector('.gg-lb-close').addEventListener('pointerdown', hide);
+
+    if (isInAigram) {
+      const tabRow = document.createElement('div');
+      tabRow.className = 'gg-lb-tabs';
+      ['global','friends'].forEach(key => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'gg-lb-tab' + (key === 'global' ? ' active' : '');
+        b.textContent = key === 'global' ? S.global : S.friends;
+        b.addEventListener('pointerdown', () => {
+          if (currentTab !== key) { currentTab = key; updateTabs(); refresh(); }
+        });
+        tabRow.appendChild(b);
+        tabs[key] = b;
+      });
+      panel.appendChild(tabRow);
+    }
+
+    body = document.createElement('div');
+    body.className = 'gg-lb-body';
+    panel.appendChild(body);
+
+    document.body.appendChild(root);
+  }
+
+  function updateTabs() {
+    Object.keys(tabs).forEach(k => tabs[k].classList.toggle('active', k === currentTab));
+  }
+
+  function render(entries) {
+    if (!body) return;
+    body.innerHTML = '';
+    if (!entries.length) {
+      const empty = document.createElement('div');
+      empty.className = 'gg-lb-state';
+      empty.textContent = currentTab === 'friends' ? S.emptyFriends : S.empty;
+      body.appendChild(empty);
+      return;
+    }
+    entries.forEach((e, i) => {
+      const row = document.createElement('div');
+      const top = i < 3;
+      row.className = 'gg-lb-row' + (top ? ' top' : '') + (e.isMe ? ' me' : '') + (isInAigram ? ' clickable' : '');
+      if (isInAigram) row.addEventListener('pointerdown', () => openProfile(e.telegram_id));
+
+      const rank = document.createElement('div');
+      if (top) { rank.className = 'gg-lb-rank medal'; rank.textContent = MEDALS[i]; rank.style.color = MEDAL_COLORS[i]; }
+      else     { rank.className = 'gg-lb-rank'; rank.textContent = String(i + 1); }
+      row.appendChild(rank);
+
+      const sz = top ? 40 : 34;
+      const av = document.createElement('div');
+      av.className = 'gg-lb-av';
+      av.style.width = sz + 'px'; av.style.height = sz + 'px';
+      av.style.fontSize = Math.round(sz * 0.4) + 'px';
+      if (e.avatar_url) {
+        const img = document.createElement('img');
+        img.src = e.avatar_url; img.alt = e.name || ''; img.draggable = false;
+        img.onerror = () => { av.innerHTML = ''; av.textContent = (e.name || '?').charAt(0).toUpperCase(); };
+        av.appendChild(img);
+      } else {
+        av.textContent = (e.name || '?').charAt(0).toUpperCase();
+      }
+      row.appendChild(av);
+
+      const info = document.createElement('div');
+      info.className = 'gg-lb-info';
+      info.innerHTML =
+        `<span class="gg-lb-name">${esc(e.name || '')}</span>` +
+        (e.isMe ? `<span class="gg-lb-mebadge">${esc(S.me)}</span>` : '');
+      row.appendChild(info);
+
+      const sc = document.createElement('span');
+      sc.className = 'gg-lb-score';
+      sc.textContent = Number(e.score || 0).toLocaleString('en-US');
+      row.appendChild(sc);
+
+      body.appendChild(row);
+    });
+  }
+
+  async function refresh() {
+    body.innerHTML = `<div class="gg-lb-state">${esc(S.loading)}</div>`;
+    const data = currentTab === 'friends' ? await fetchFriends() : await fetchGlobal();
+    render(data);
+  }
+
+  function show() {
+    build();
+    currentTab = 'global';
+    updateTabs();
+    root.classList.add('show');
+    refresh();
+  }
+  function hide() { if (root) root.classList.remove('show'); }
+
+  const tbtn = document.getElementById('lbToggleBtn');
+  if (tbtn) tbtn.addEventListener('pointerdown', show);
+
+  window.GG_LB = { isInAigram, submitScore, show, hide };
+})();
+</script>
+
+<script>
+/* ========================================================================
+   Frosted Window — three themes, finger-wipe ASMR
+   ======================================================================== */
+(() => {
+  'use strict';
+
+  /* ---------- canvases + sizing ---------- */
+  const bg     = document.getElementById('bg');
+  const drip   = document.getElementById('drip');
+  const frost  = document.getElementById('frost');
+  const bgCtx    = bg.getContext('2d');
+  const dripCtx  = drip.getContext('2d');
+  const frostCtx = frost.getContext('2d');
+  const titleEl  = document.getElementById('title');
+  const countEl  = document.getElementById('count');
+  const themeDots = document.getElementById('themeDots');
+
+  let W = 0, H = 0, DPR = 1;
+  let drops = [];        // running water droplets on the glass
+  let particles = [];    // theme-specific bg particles (rain / snow)
+  let lifetime = 0;      // accumulated wiped "pixels" / 100  (the score)
+  let pendingScore = 0;
+  let firstTouch = false;
+  let regrowAcc = 0;     // ms accumulator for slow regrowth
+  const isPoster = new URLSearchParams(window.location.search).get('poster') === '1';
+
+  /* ---------- theme palette ---------- */
+  const THEMES = {
+    vanity: {
+      label: 'Vanity Mirror',
+      bodyBg: '#1f1414',
+      frostTint: [255, 245, 235],   // warm white
+      frostAlpha: 0.86,
+      drip: { color: 'rgba(255, 220, 200, 0.55)', interval: 110 },
+      ambient: 'pad-warm',
+      paintBg: paintVanity,
+      stepParticles: stepVanityParticles,
+      drawParticles: drawVanityParticles,
+      initParticles: () => { particles = []; for (let i = 0; i < 40; i++) particles.push(spawnDust()); },
+    },
+    rain: {
+      label: 'Rain Window',
+      bodyBg: '#0a0c1a',
+      frostTint: [218, 232, 255],   // cool white
+      frostAlpha: 0.82,
+      drip: { color: 'rgba(170, 210, 255, 0.7)', interval: 80 },
+      ambient: 'rain',
+      paintBg: paintRain,
+      stepParticles: stepRainParticles,
+      drawParticles: drawRainParticles,
+      initParticles: () => { particles = []; for (let i = 0; i < 90; i++) particles.push(spawnRain()); },
+    },
+    winter: {
+      label: 'Winter Window',
+      bodyBg: '#171c24',
+      frostTint: [240, 245, 252],   // ice white
+      frostAlpha: 0.90,
+      drip: { color: 'rgba(220, 230, 240, 0.45)', interval: 200 },
+      ambient: 'wind',
+      paintBg: paintWinter,
+      stepParticles: stepWinterParticles,
+      drawParticles: drawWinterParticles,
+      initParticles: () => { particles = []; for (let i = 0; i < 60; i++) particles.push(spawnSnow()); },
+    },
+  };
+  let theme = THEMES.vanity;
+  let themeName = 'vanity';
+
+  /* ============ THEME PAINTERS (cached to bg canvas once per theme) ============ */
+
+  function paintVanity(c, w, h) {
+    // Warm bath / vanity mirror — deeper rosy wall, gold bulbs, brass frame hints,
+    // dark silhouette of a vase + warm body shadow to create real wipe contrast.
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#1a0708');
+    g.addColorStop(0.18, '#3b1416');
+    g.addColorStop(0.45, '#7a2a2a');
+    g.addColorStop(0.75, '#b85d52');
+    g.addColorStop(1,    '#e29981');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Soft warm bloom (background haze around vanity)
+    const radial = c.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, h * 0.65);
+    radial.addColorStop(0, 'rgba(255, 200, 160, 0.40)');
+    radial.addColorStop(1, 'rgba(255, 180, 140, 0)');
+    c.fillStyle = radial; c.fillRect(0, 0, w, h);
+
+    // Distant body silhouette — warm rosy figure (towel/skin) bottom-center
+    const fx = w * 0.50, fy = h * 0.72;
+    const figGrad = c.createRadialGradient(fx, fy, 0, fx, fy + h * 0.1, h * 0.42);
+    figGrad.addColorStop(0,    'rgba(220, 130, 110, 0.85)');
+    figGrad.addColorStop(0.4,  'rgba(200, 110, 95, 0.55)');
+    figGrad.addColorStop(1,    'rgba(160, 70, 60, 0)');
+    c.fillStyle = figGrad;
+    c.beginPath(); c.ellipse(fx, fy, w * 0.34, h * 0.36, 0, 0, Math.PI * 2); c.fill();
+    // Shoulders shadow
+    c.fillStyle = 'rgba(90, 30, 30, 0.45)';
+    c.beginPath();
+    c.ellipse(fx, h * 0.95, w * 0.55, h * 0.18, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Plant / vase silhouette on right (cottagecore detail)
+    c.fillStyle = 'rgba(20, 14, 18, 0.55)';
+    c.beginPath();
+    c.moveTo(w * 0.82, h * 0.62);
+    c.bezierCurveTo(w * 0.95, h * 0.55, w * 0.88, h * 0.45, w * 0.86, h * 0.40);
+    c.bezierCurveTo(w * 0.92, h * 0.46, w * 0.97, h * 0.58, w * 0.93, h * 0.66);
+    c.lineTo(w * 0.93, h * 0.78);
+    c.lineTo(w * 0.83, h * 0.78);
+    c.closePath(); c.fill();
+
+    // Vanity bulb strip across top + brass rod
+    c.fillStyle = '#4a2e1a';
+    c.fillRect(0, h * 0.05, w, 4);
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+      const bx = w * (0.12 + (i * 0.76) / (n - 1));
+      const by = h * 0.10;
+      // halo (brighter so it cuts through frost)
+      const halo = c.createRadialGradient(bx, by, 0, bx, by, w * 0.18);
+      halo.addColorStop(0,   'rgba(255, 240, 200, 0.95)');
+      halo.addColorStop(0.3, 'rgba(255, 220, 160, 0.40)');
+      halo.addColorStop(1,   'rgba(255, 200, 130, 0)');
+      c.fillStyle = halo; c.beginPath(); c.arc(bx, by, w * 0.18, 0, Math.PI * 2); c.fill();
+      // bulb body
+      c.fillStyle = '#fff5d8'; c.beginPath(); c.arc(bx, by, 14, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(bx - 3, by - 3, 6, 0, Math.PI * 2); c.fill();
+      // bulb socket
+      c.fillStyle = '#8a5530'; c.fillRect(bx - 6, by + 10, 12, 6);
+    }
+
+    // Bottom dark vignette to balance composition
+    const vig = c.createLinearGradient(0, h * 0.85, 0, h);
+    vig.addColorStop(0, 'rgba(20, 8, 10, 0)');
+    vig.addColorStop(1, 'rgba(20, 8, 10, 0.45)');
+    c.fillStyle = vig; c.fillRect(0, 0, w, h);
+  }
+
+  function paintRain(c, w, h) {
+    // Y2K neon city night through rain
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#020512');
+    g.addColorStop(0.6,  '#0a1228');
+    g.addColorStop(1,    '#020612');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Building silhouettes — irregular skyscraper edges
+    const baseY = h * 0.78;
+    c.fillStyle = '#01030a';
+    c.beginPath(); c.moveTo(0, h); c.lineTo(0, baseY);
+    let x = 0;
+    while (x < w) {
+      const bw = 24 + Math.floor(((x * 31) % 60));
+      const bh = (((x * 17) % 80) + 30) * 1.1;
+      c.lineTo(x, baseY - bh);
+      c.lineTo(x + bw, baseY - bh);
+      x += bw;
+    }
+    c.lineTo(w, h); c.closePath(); c.fill();
+
+    // Neon signs — rectangles glowing magenta/cyan/yellow
+    const signs = [
+      { x: 0.10, y: 0.55, w: 0.10, h: 0.06, col: '#ff39c2' },
+      { x: 0.28, y: 0.62, w: 0.07, h: 0.05, col: '#39d8ff' },
+      { x: 0.46, y: 0.50, w: 0.13, h: 0.04, col: '#ffd23e' },
+      { x: 0.66, y: 0.58, w: 0.10, h: 0.07, col: '#ff39c2' },
+      { x: 0.84, y: 0.52, w: 0.08, h: 0.05, col: '#39d8ff' },
+    ];
+    signs.forEach(s => {
+      const x = s.x * w, y = s.y * h, sw = s.w * w, sh = s.h * h;
+      // glow halo
+      const halo = c.createRadialGradient(x + sw/2, y + sh/2, 0, x + sw/2, y + sh/2, Math.max(sw, sh) * 3.5);
+      halo.addColorStop(0,    s.col + 'cc');
+      halo.addColorStop(0.25, s.col + '55');
+      halo.addColorStop(1,    s.col + '00');
+      c.fillStyle = halo;
+      c.fillRect(x - sw*3, y - sh*3, sw*7, sh*7);
+      // core
+      c.fillStyle = s.col; c.fillRect(x, y, sw, sh);
+      c.fillStyle = '#ffffff'; c.fillRect(x + sw*0.15, y + sh*0.2, sw*0.7, sh*0.2);
+    });
+
+    // Window lights in buildings — small specks
+    c.fillStyle = '#ffe080';
+    for (let i = 0; i < 120; i++) {
+      const wx = ((i * 137) % w);
+      const wy = baseY - (((i * 71) % 90) + 5);
+      if (((i * 19) % 5) === 0) {
+        c.globalAlpha = 0.6 + (((i * 13) % 40) / 100);
+        c.fillRect(wx, wy, 2, 2);
+      }
+    }
+    c.globalAlpha = 1;
+
+    // Distant rain veil (cool tone overlay)
+    c.fillStyle = 'rgba(40, 70, 120, 0.15)'; c.fillRect(0, 0, w, h);
+  }
+
+  function paintWinter(c, w, h) {
+    // Pre-dawn winter — deeper indigo sky, pink horizon, snowy pines, lone cabin with amber window
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0,    '#1a2440');
+    g.addColorStop(0.30, '#404e7a');
+    g.addColorStop(0.50, '#a07090');
+    g.addColorStop(0.62, '#e8a899');
+    g.addColorStop(0.74, '#f8ddd0');
+    g.addColorStop(1,    '#cdd8e0');
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+    // Soft sun glow center-right (the pink dawn)
+    const sx = w * 0.55, sy = h * 0.58;
+    const sun = c.createRadialGradient(sx, sy, 0, sx, sy, w * 0.55);
+    sun.addColorStop(0,    'rgba(255, 220, 200, 0.85)');
+    sun.addColorStop(0.25, 'rgba(255, 180, 175, 0.40)');
+    sun.addColorStop(1,    'rgba(255, 180, 175, 0)');
+    c.fillStyle = sun; c.fillRect(0, 0, w, h);
+
+    // Distant pine ridge — dark blue
+    c.fillStyle = '#2a3656';
+    c.beginPath(); c.moveTo(0, h * 0.78);
+    let x = 0; const baseY1 = h * 0.78;
+    while (x < w) {
+      const peakY = baseY1 - (((x * 13) % 28) + 12);
+      c.lineTo(x, peakY);
+      x += 18;
+    }
+    c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
+
+    // Closer dark pines
+    c.fillStyle = '#101824';
+    for (let i = 0; i < 14; i++) {
+      const tx = (i * w / 14) + ((i * 17) % 30) - 10;
+      const ty = h * 0.84;
+      const th = 70 + ((i * 31) % 50);
+      const tw = th * 0.65;
+      c.beginPath();
+      c.moveTo(tx, ty);
+      c.lineTo(tx - tw / 2, ty + th * 0.3);
+      c.lineTo(tx - tw * 0.25, ty + th * 0.3);
+      c.lineTo(tx - tw * 0.5, ty + th * 0.6);
+      c.lineTo(tx - tw * 0.20, ty + th * 0.6);
+      c.lineTo(tx - tw * 0.45, ty + th);
+      c.lineTo(tx + tw * 0.45, ty + th);
+      c.lineTo(tx + tw * 0.20, ty + th * 0.6);
+      c.lineTo(tx + tw * 0.5, ty + th * 0.6);
+      c.lineTo(tx + tw * 0.25, ty + th * 0.3);
+      c.lineTo(tx + tw / 2, ty + th * 0.3);
+      c.closePath(); c.fill();
+    }
+
+    // Lone cabin: dark silhouette + glowing amber window — the satisfying reveal
+    const cw = w * 0.18, chh = h * 0.10;
+    const cx = w * 0.32, cy = h * 0.76;
+    // amber glow halo first (cuts through frost when wiped)
+    const halo = c.createRadialGradient(cx + cw * 0.5, cy + chh * 0.45, 0, cx + cw * 0.5, cy + chh * 0.45, cw * 1.6);
+    halo.addColorStop(0,    'rgba(255, 200, 110, 0.55)');
+    halo.addColorStop(0.4,  'rgba(255, 170, 80, 0.20)');
+    halo.addColorStop(1,    'rgba(255, 170, 80, 0)');
+    c.fillStyle = halo; c.fillRect(cx - cw, cy - chh, cw * 3, chh * 3);
+    // cabin body
+    c.fillStyle = '#080d18';
+    c.fillRect(cx, cy, cw, chh);
+    // roof
+    c.beginPath();
+    c.moveTo(cx - 6, cy);
+    c.lineTo(cx + cw / 2, cy - chh * 0.55);
+    c.lineTo(cx + cw + 6, cy);
+    c.closePath(); c.fill();
+    // window
+    c.fillStyle = '#ffc674';
+    c.fillRect(cx + cw * 0.32, cy + chh * 0.3, cw * 0.36, chh * 0.42);
+    c.fillStyle = '#ffe6a8';
+    c.fillRect(cx + cw * 0.34, cy + chh * 0.32, cw * 0.32, chh * 0.18);
+    // snow on roof
+    c.fillStyle = '#f0eef2';
+    c.beginPath();
+    c.moveTo(cx - 6, cy);
+    c.lineTo(cx + cw / 2, cy - chh * 0.55);
+    c.lineTo(cx + cw + 6, cy);
+    c.lineTo(cx + cw + 4, cy - 2);
+    c.lineTo(cx + cw / 2, cy - chh * 0.6);
+    c.lineTo(cx - 4, cy - 2);
+    c.closePath(); c.fill();
+
+    // Snow on ground
+    c.fillStyle = '#e8eef2';
+    c.beginPath(); c.moveTo(0, h * 0.92);
+    c.bezierCurveTo(w * 0.3, h * 0.88, w * 0.7, h * 0.96, w, h * 0.91);
+    c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fill();
+  }
+
+  /* ============ THEME PARTICLES (rain streaks / snow / warm dust) ============ */
+  function spawnDust() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: -0.05 - Math.random() * 0.18,
+      r: 0.6 + Math.random() * 1.4,
+      a: 0.2 + Math.random() * 0.35,
+    };
+  }
+  function spawnRain() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H - H * 0.5,
+      v: 6 + Math.random() * 8,
+      len: 12 + Math.random() * 14,
+      a: 0.3 + Math.random() * 0.45,
+    };
+  }
+  function spawnSnow() {
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vy: 0.25 + Math.random() * 0.6,
+      drift: 0.3 + Math.random() * 0.6,
+      phase: Math.random() * Math.PI * 2,
+      r: 1.2 + Math.random() * 2.4,
+      a: 0.55 + Math.random() * 0.4,
+    };
+  }
+
+  function stepVanityParticles(dt) {
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+    });
+  }
+  function stepRainParticles(dt) {
+    particles.forEach(p => {
+      p.y += p.v;
+      if (p.y > H + 20) { p.y = -20; p.x = Math.random() * W; }
+    });
+  }
+  function stepWinterParticles(dt) {
+    particles.forEach(p => {
+      p.phase += 0.02;
+      p.x += Math.sin(p.phase) * p.drift * 0.18;
+      p.y += p.vy;
+      if (p.y > H + 5) { p.y = -5; p.x = Math.random() * W; }
+    });
+  }
+
+  function drawVanityParticles(c) {
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    particles.forEach(p => {
+      c.fillStyle = `rgba(255, 220, 180, ${p.a})`;
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+    });
+    c.restore();
+  }
+  function drawRainParticles(c) {
+    c.save();
+    c.strokeStyle = 'rgba(170, 200, 240, 0.5)';
+    c.lineWidth = 1;
+    particles.forEach(p => {
+      c.globalAlpha = p.a;
+      c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - 2, p.y + p.len); c.stroke();
+    });
+    c.restore();
+  }
+  function drawWinterParticles(c) {
+    c.save();
+    particles.forEach(p => {
+      c.fillStyle = `rgba(255, 255, 255, ${p.a})`;
+      c.beginPath(); c.arc(p.x, p.y, p.r, 0, Math.PI * 2); c.fill();
+    });
+    c.restore();
+  }
+
+  /* ============ FROST LAYER ============ */
+  function fillFrost() {
+    const [r, g, b] = theme.frostTint;
+    const a = theme.frostAlpha;
+    frostCtx.save();
+    frostCtx.globalCompositeOperation = 'source-over';
+    frostCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+    frostCtx.fillRect(0, 0, W, H);
+
+    // Noise / crystal texture
+    if (themeName === 'winter') {
+      paintIceCrystals(frostCtx);
+    } else {
+      paintFrostNoise(frostCtx);
+    }
+    frostCtx.restore();
+  }
+
+  function paintFrostNoise(c) {
+    // Subtle dappled noise to make the frost look organic
+    c.save();
+    c.globalAlpha = 0.5;
+    for (let i = 0; i < 1200; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const r = 0.6 + Math.random() * 1.6;
+      const a = 0.05 + Math.random() * 0.18;
+      c.fillStyle = `rgba(255, 255, 255, ${a})`;
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    }
+    // A few darker droplet-base nodes
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const r = 4 + Math.random() * 12;
+      c.globalAlpha = 0.06 + Math.random() * 0.06;
+      const grad = c.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.7)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = grad;
+      c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    c.restore();
+  }
+
+  function paintIceCrystals(c) {
+    // Fractal-ish snowflakes scattered + radial frost ferns
+    c.save();
+    for (let i = 0; i < 24; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const size = 30 + Math.random() * 70;
+      drawIceFern(c, x, y, size, Math.random() * Math.PI);
+    }
+    // a few sparkles
+    c.globalAlpha = 0.6;
+    for (let i = 0; i < 300; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const a = 0.1 + Math.random() * 0.25;
+      c.fillStyle = `rgba(255, 255, 255, ${a})`;
+      c.fillRect(x, y, 1, 1);
+    }
+    c.restore();
+  }
+
+  function drawIceFern(c, x, y, size, rot) {
+    c.save();
+    c.translate(x, y);
+    c.rotate(rot);
+    c.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+    c.lineWidth = 0.7;
+    for (let a = 0; a < 6; a++) {
+      c.save();
+      c.rotate((a * Math.PI * 2) / 6);
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(0, -size);
+      c.stroke();
+      // Branches
+      const branches = 4;
+      for (let b = 1; b <= branches; b++) {
+        const by = -(b / branches) * size;
+        const bl = (1 - b / branches) * size * 0.45;
+        c.beginPath();
+        c.moveTo(0, by); c.lineTo(bl, by - bl * 0.6); c.stroke();
+        c.beginPath();
+        c.moveTo(0, by); c.lineTo(-bl, by - bl * 0.6); c.stroke();
+      }
+      c.restore();
+    }
+    c.restore();
+  }
+
+  /* ---------- wipe (destination-out with feathered brush) ---------- */
+  let lastPt = null;
+  let prevPt = null;
+  function wipeAt(x, y, pressure = 1) {
+    const c = frostCtx;
+    c.save();
+    c.globalCompositeOperation = 'destination-out';
+    const radius = 26 * (0.85 + 0.3 * pressure);
+
+    if (lastPt) {
+      // segment: stroke a tapered line from lastPt to (x,y)
+      const dx = x - lastPt.x, dy = y - lastPt.y;
+      const dist = Math.hypot(dx, dy);
+      const steps = Math.max(1, Math.floor(dist / (radius * 0.45)));
+      for (let i = 1; i <= steps; i++) {
+        const px = lastPt.x + (dx * i) / steps;
+        const py = lastPt.y + (dy * i) / steps;
+        const grad = c.createRadialGradient(px, py, 0, px, py, radius);
+        grad.addColorStop(0,    'rgba(0,0,0,1)');
+        grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+        grad.addColorStop(1,    'rgba(0,0,0,0)');
+        c.fillStyle = grad;
+        c.beginPath(); c.arc(px, py, radius, 0, Math.PI * 2); c.fill();
+        // accumulate score — proportional to wiped area, scaled down
+        lifetime += radius * radius * 0.0025;
+      }
+    } else {
+      // single tap
+      const grad = c.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0,    'rgba(0,0,0,1)');
+      grad.addColorStop(0.55, 'rgba(0,0,0,0.85)');
+      grad.addColorStop(1,    'rgba(0,0,0,0)');
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(x, y, radius, 0, Math.PI * 2); c.fill();
+      lifetime += radius * radius * 0.005;
+    }
+    c.restore();
+
+    prevPt = lastPt;
+    lastPt = { x, y };
+  }
+
+  /* ---------- slow refrost ---------- */
+  function regrowStep(dtMs) {
+    if (isPoster) return;              // poster mode: never regrow
+    regrowAcc += dtMs;
+    if (regrowAcc < 260) return;       // ~4 ticks/sec, slow enough to keep drawings readable for 60-90s
+    regrowAcc = 0;
+
+    const [r, g, b] = theme.frostTint;
+    const c = frostCtx;
+    c.save();
+    c.globalCompositeOperation = 'source-over';
+    // 2 small dabs per tick — drawings stay readable for a long while
+    for (let i = 0; i < 2; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      const rad = 8 + Math.random() * 20;
+      const grad = c.createRadialGradient(x, y, 0, x, y, rad);
+      grad.addColorStop(0,    `rgba(${r}, ${g}, ${b}, 0.040)`);
+      grad.addColorStop(0.6,  `rgba(${r}, ${g}, ${b}, 0.020)`);
+      grad.addColorStop(1,    `rgba(${r}, ${g}, ${b}, 0)`);
+      c.fillStyle = grad;
+      c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    c.restore();
+  }
+
+  /* ============ DRIPS (water beads running down wiped trails) ============ */
+  function spawnDrip(x, y, vx) {
+    drops.push({
+      x: x + (Math.random() - 0.5) * 6,
+      y,
+      vx: vx * 0.08,
+      vy: 0.1,
+      life: 0,
+      maxLife: 2200 + Math.random() * 1800,
+      r: 2 + Math.random() * 2.5,
+      color: theme.drip.color,
+    });
+    if (drops.length > 80) drops.shift();
+  }
+  function stepDrips(dtMs) {
+    const dt = dtMs / 16;
+    for (let i = drops.length - 1; i >= 0; i--) {
+      const d = drops[i];
+      d.life += dtMs;
+      d.vy += 0.04 * dt;       // gravity
+      d.vx *= 0.96;             // friction
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      // Each drop also nibbles the frost a bit as it falls
+      const c = frostCtx;
+      c.save();
+      c.globalCompositeOperation = 'destination-out';
+      const grad = c.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 1.8);
+      grad.addColorStop(0, 'rgba(0,0,0,0.4)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(d.x, d.y, d.r * 1.8, 0, Math.PI * 2); c.fill();
+      c.restore();
+      if (d.life > d.maxLife || d.y > H + 20) drops.splice(i, 1);
+    }
+  }
+  function drawDrips(c) {
+    c.clearRect(0, 0, W, H);
+    drops.forEach(d => {
+      const grad = c.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.r * 2.4);
+      grad.addColorStop(0,    d.color);
+      grad.addColorStop(0.7,  d.color.replace(/[\d.]+\)$/, '0.18)'));
+      grad.addColorStop(1,    d.color.replace(/[\d.]+\)$/, '0)'));
+      c.fillStyle = grad;
+      c.beginPath(); c.arc(d.x, d.y, d.r * 2.4, 0, Math.PI * 2); c.fill();
+      // bright reflection
+      c.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      c.beginPath(); c.arc(d.x - d.r * 0.3, d.y - d.r * 0.4, d.r * 0.35, 0, Math.PI * 2); c.fill();
+    });
+  }
+
+  /* ============ AUDIO (iOS-safe, breathing pad + throttled squeak) ============ */
+  let actx = null, master = null, ambientStarted = false;
+  let noiseBuf = null;
+  let lastSqueak = 0;
+  let voicesAlive = 0;
+
+  function initAudio() {
+    if (actx) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      actx = new Ctx();
+      master = actx.createGain();
+      master.gain.value = 0.5;
+      master.connect(actx.destination);
+
+      // pre-allocate pink-ish noise buffer (2s loop) — used by squeak + ambient
+      const sec = 2;
+      const len = actx.sampleRate * sec;
+      noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+      const ch = noiseBuf.getChannelData(0);
+      let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+      for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        ch[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
+      }
+      // Ambient is delayed by 600ms to dodge iOS first-gesture stall
+      setTimeout(() => { if (!ambientStarted && actx) { startAmbient(); ambientStarted = true; } }, 600);
+    } catch (_) { actx = null; }
+  }
+
+  // Ambient: breathing drone per global rule (no continuous loop)
+  let ambientNodes = null;
+  function startAmbient() {
+    if (!actx) return;
+    // Build per current theme; tear down on theme switch.
+    rebuildAmbient();
+    scheduleAmbientBreath();
+  }
+  function rebuildAmbient() {
+    if (!actx) return;
+    if (ambientNodes) { try { ambientNodes.disconnect(); } catch(_){} ambientNodes = null; }
+    const g = actx.createGain();
+    g.gain.value = 0;
+    g.connect(master);
+
+    if (theme.ambient === 'rain') {
+      // pink-noise rain through low-pass
+      const src = actx.createBufferSource();
+      src.buffer = noiseBuf; src.loop = true;
+      const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+      const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 220;
+      src.connect(hp); hp.connect(lp); lp.connect(g);
+      src.start();
+      ambientNodes = { g, src, _peak: 0.35 };
+    } else if (theme.ambient === 'wind') {
+      const src = actx.createBufferSource();
+      src.buffer = noiseBuf; src.loop = true;
+      const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+      const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 80;
+      src.connect(hp); hp.connect(lp); lp.connect(g);
+      src.start();
+      ambientNodes = { g, src, _peak: 0.22 };
+    } else {
+      // pad-warm: two detuned sines + tiny noise tail
+      const o1 = actx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 110;
+      const o2 = actx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 165;
+      const o3 = actx.createOscillator(); o3.type = 'sine'; o3.frequency.value = 220.5;
+      const mix = actx.createGain(); mix.gain.value = 0.4;
+      o1.connect(mix); o2.connect(mix); o3.connect(mix);
+      // gentle filter sweep using LFO
+      const filt = actx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 800;
+      mix.connect(filt); filt.connect(g);
+      o1.start(); o2.start(); o3.start();
+      ambientNodes = { g, o1, o2, o3, _peak: 0.18 };
+    }
+  }
+
+  // breathing: rise 5-8s → hold 8-16s → fall 6-10s → silence 7-16s → loop
+  function scheduleAmbientBreath() {
+    if (!actx || !ambientNodes) return;
+    const t0 = actx.currentTime;
+    const rise = 5 + Math.random() * 3;
+    const hold = 8 + Math.random() * 8;
+    const fall = 6 + Math.random() * 4;
+    const silent = 7 + Math.random() * 9;
+    const peak = ambientNodes._peak;
+    const g = ambientNodes.g.gain;
+    try {
+      g.cancelScheduledValues(t0);
+      g.setValueAtTime(g.value, t0);
+      g.linearRampToValueAtTime(peak, t0 + rise);
+      g.linearRampToValueAtTime(peak, t0 + rise + hold);
+      g.linearRampToValueAtTime(0,    t0 + rise + hold + fall);
+    } catch (_) {}
+    setTimeout(scheduleAmbientBreath, (rise + hold + fall + silent) * 1000);
+  }
+
+  // Squeak SFX: short filtered noise burst, throttled, max 4 voices
+  function playSqueak(speed) {
+    if (!actx || actx.state !== 'running') return;
+    const now = performance.now();
+    if (now - lastSqueak < 110) return;
+    if (voicesAlive >= 4) return;
+    lastSqueak = now;
+    voicesAlive++;
+    try {
+      const src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = false;
+      const bp = actx.createBiquadFilter(); bp.type = 'bandpass';
+      bp.frequency.value = 1800 + Math.min(2400, speed * 35);
+      bp.Q.value = 6;
+      const g = actx.createGain(); g.gain.value = 0;
+      const t = actx.currentTime;
+      const amp = Math.min(0.22, 0.05 + speed * 0.0035);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      src.connect(bp); bp.connect(g); g.connect(master);
+      // randomize start offset for variation
+      src.start(t, Math.random() * 1.5);
+      src.stop(t + 0.22);
+      src.onended = () => { voicesAlive = Math.max(0, voicesAlive - 1); };
+    } catch (_) { voicesAlive = Math.max(0, voicesAlive - 1); }
+  }
+
+  // Drip plink (lower, infrequent)
+  let lastPlink = 0;
+  function playPlink() {
+    if (!actx || actx.state !== 'running') return;
+    const now = performance.now();
+    if (now - lastPlink < 800) return;
+    lastPlink = now;
+    try {
+      const o = actx.createOscillator(); o.type = 'sine';
+      const base = (themeName === 'winter') ? 880 : (themeName === 'rain' ? 520 : 660);
+      o.frequency.value = base * (0.95 + Math.random() * 0.12);
+      const g = actx.createGain();
+      const t = actx.currentTime;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.13, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.6);
+    } catch (_) {}
+  }
+
+  /* ============ POINTER ============ */
+  let pointerActive = false;
+  let lastMoveTime = 0;
+  let lastMovePos = null;
+
+  function onDown(e) {
+    e.preventDefault();
+    pointerActive = true;
+    lastPt = null; prevPt = null;
+    if (!firstTouch) {
+      firstTouch = true;
+      countEl.classList.remove('hint');
+      countEl.textContent = formatScore(lifetime);
+    }
+    initAudio();
+    if (actx && actx.state !== 'running') {
+      // Single resume; if it doesn't run, first squeak is silent — fine.
+      try { actx.resume(); } catch (_) {}
+    }
+    const r = frost.getBoundingClientRect();
+    const x = (e.clientX - r.left);
+    const y = (e.clientY - r.top);
+    wipeAt(x, y, 1);
+    bumpCount();
+    spawnDrip(x, y, 0);
+    lastMoveTime = performance.now();
+    lastMovePos = { x, y };
+  }
+
+  function onMove(e) {
+    if (!pointerActive) return;
+    e.preventDefault();
+    const r = frost.getBoundingClientRect();
+    const x = (e.clientX - r.left);
+    const y = (e.clientY - r.top);
+    const now = performance.now();
+    if (now - lastMoveTime < 14) return;     // throttle to ~66fps max
+    let speed = 0;
+    if (lastMovePos) {
+      const dx = x - lastMovePos.x, dy = y - lastMovePos.y;
+      speed = Math.hypot(dx, dy) / Math.max(1, (now - lastMoveTime));
+    }
+    lastMovePos = { x, y };
+    lastMoveTime = now;
+    wipeAt(x, y, 1);
+    playSqueak(speed);
+    // Occasionally seed a drip along the wipe
+    if (Math.random() < 0.05) spawnDrip(x, y, prevPt ? (x - prevPt.x) : 0);
+    bumpCount();
+  }
+
+  function onUp() {
+    pointerActive = false;
+    lastPt = null; prevPt = null;
+    flushScore();
+  }
+
+  function bumpCount() {
+    pendingScore++;
+    if (firstTouch) {
+      countEl.textContent = formatScore(lifetime);
+      countEl.classList.add('pop');
+      setTimeout(() => countEl.classList.remove('pop'), 160);
+    }
+  }
+
+  function formatScore(n) {
+    return Math.floor(n).toLocaleString('en-US');
+  }
+
+  /* ---------- persistence + remote submit ---------- */
+  const STORAGE_KEY = 'frosted_window_lifetime_v1';
+  function loadLifetime() {
+    try {
+      const v = parseFloat(localStorage.getItem(STORAGE_KEY) || '0');
+      if (Number.isFinite(v) && v > 0) lifetime = v;
+    } catch (_) {}
+  }
+  function saveLifetime() {
+    try { localStorage.setItem(STORAGE_KEY, String(Math.floor(lifetime))); } catch (_) {}
+  }
+  let saveAcc = 0;
+  function maybeSave(dtMs) {
+    saveAcc += dtMs;
+    if (saveAcc > 1500 && pendingScore > 0) {
+      saveAcc = 0;
+      saveLifetime();
+      if (pendingScore >= 8) {
+        pendingScore = 0;
+        if (window.GG_LB && window.GG_LB.submitScore) {
+          window.GG_LB.submitScore(Math.floor(lifetime));
+        }
+      }
+    }
+  }
+  function flushScore() {
+    saveLifetime();
+    if (pendingScore > 0 && window.GG_LB && window.GG_LB.submitScore) {
+      window.GG_LB.submitScore(Math.floor(lifetime));
+      pendingScore = 0;
+    }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushScore(); });
+  window.addEventListener('pagehide', flushScore);
+
+  /* ============ MAIN LOOP ============ */
+  let lastT = 0;
+  let raf = 0;
+  const FRAME_MS = 1000 / 60;
+  function frame(t) {
+    if (!lastT) lastT = t;
+    const dt = Math.min(64, t - lastT);
+    if (dt < FRAME_MS - 1) { raf = requestAnimationFrame(frame); return; }
+    lastT = t;
+
+    // bg + particles
+    bgCtx.clearRect(0, 0, W, H);
+    if (cachedBg) bgCtx.drawImage(cachedBg, 0, 0, W, H);
+    theme.stepParticles(dt);
+    theme.drawParticles(bgCtx);
+
+    // drip nibbles frost, then renders
+    stepDrips(dt);
+    drawDrips(dripCtx);
+
+    regrowStep(dt);
+    maybeSave(dt);
+
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ============ THEME SWITCH ============ */
+  let cachedBg = null;
+  function applyTheme(name) {
+    if (!THEMES[name]) return;
+    themeName = name;
+    theme = THEMES[name];
+    document.body.style.background = theme.bodyBg;
+    // re-cache bg
+    cachedBg = document.createElement('canvas');
+    cachedBg.width = W; cachedBg.height = H;
+    theme.paintBg(cachedBg.getContext('2d'), W, H);
+    // reset particles
+    theme.initParticles();
+    drops = [];
+    // refrost
+    fillFrost();
+    // update theme dots
+    themeDots.querySelectorAll('.dot').forEach(d => {
+      d.classList.toggle('active', d.dataset.t === name);
+    });
+    // restart ambient
+    if (ambientStarted) {
+      rebuildAmbient();
+      scheduleAmbientBreath();
+    }
+    try { localStorage.setItem('frosted_window_theme', name); } catch (_) {}
+  }
+
+  themeDots.addEventListener('pointerdown', e => {
+    const dot = e.target.closest('.dot');
+    if (!dot) return;
+    const t = dot.dataset.t;
+    if (t && t !== themeName) {
+      initAudio();
+      if (actx && actx.state !== 'running') { try { actx.resume(); } catch (_) {} }
+      applyTheme(t);
+    }
+  });
+
+  /* ============ RESIZE ============ */
+  function resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = w; H = h;
+    [bg, drip, frost].forEach(cv => {
+      cv.style.width = w + 'px';
+      cv.style.height = h + 'px';
+      cv.width = Math.floor(w * DPR);
+      cv.height = Math.floor(h * DPR);
+      const c = cv.getContext('2d');
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    });
+    // re-cache bg
+    cachedBg = document.createElement('canvas');
+    cachedBg.width = W; cachedBg.height = H;
+    theme.paintBg(cachedBg.getContext('2d'), W, H);
+    theme.initParticles();
+    fillFrost();
+  }
+  window.addEventListener('resize', resize);
+
+  /* ============ INIT ============ */
+  loadLifetime();
+  resize();
+  const urlTheme = new URLSearchParams(window.location.search).get('theme');
+  let saved = null;
+  try { saved = localStorage.getItem('frosted_window_theme'); } catch (_) {}
+  const startTheme = (urlTheme && THEMES[urlTheme]) ? urlTheme
+                    : (saved && THEMES[saved]) ? saved
+                    : 'rain';
+  applyTheme(startTheme);
+
+  if (lifetime > 0) {
+    countEl.classList.remove('hint');
+    countEl.textContent = formatScore(lifetime);
+    firstTouch = true;
+  }
+
+  // Poster mode — hide bottom HUD + show top title + wipe a big swirl (synchronous)
+  function doPosterWipe() {
+    const cx = W * 0.5, cy = H * 0.62;
+    const r0 = Math.min(W, H) * 0.22;
+    lastPt = null;
+    const N = 220;
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * Math.PI * 6;
+      const rad = r0 * (0.22 + 0.78 * (i / N));
+      wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 1);
+    }
+    lastPt = null;
+    const sweepY = H * 0.42;
+    const sweepW = W * 0.65;
+    for (let i = 0; i <= 36; i++) {
+      const fx = W * 0.5 - sweepW * 0.5 + (sweepW * i / 36);
+      wipeAt(fx, sweepY + Math.sin(i * 0.4) * 8, 1);
+    }
+    lastPt = null;
+  }
+  if (isPoster) {
+    document.querySelector('.hud-bottom').style.display = 'none';
+    document.querySelector('.theme-dots').style.display = 'none';
+    document.querySelector('.watermark').style.display = 'none';
+    document.getElementById('posterOverlay').style.display = 'block';
+    doPosterWipe();           // synchronous — fires after applyTheme/fillFrost
+  }
+
+  // Demo / poster helpers — pre-wipe a heart-shaped reveal
+  const demo = new URLSearchParams(window.location.search).get('demo');
+  if (demo === 'heart') {
+    setTimeout(() => {
+      const cx = W * 0.5, cy = H * 0.46, scale = Math.min(W, H) * 0.22;
+      // parametric heart: x = 16 sin^3 t, y = -(13 cos t - 5 cos 2t - 2 cos 3t - cos 4t)
+      const N = 110;
+      lastPt = null;
+      for (let i = 0; i <= N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        const hx = 16 * Math.pow(Math.sin(t), 3);
+        const hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+        wipeAt(cx + hx * scale / 16, cy + hy * scale / 16, 1);
+      }
+      lastPt = null;
+    }, 100);
+  } else if (demo === 'circle') {
+    setTimeout(() => {
+      const cx = W * 0.5, cy = H * 0.46, rad = Math.min(W, H) * 0.28;
+      lastPt = null;
+      const N = 80;
+      for (let i = 0; i <= N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        wipeAt(cx + Math.cos(t) * rad, cy + Math.sin(t) * rad, 1);
+      }
+      // fill inside
+      for (let r = rad; r > 0; r -= 18) {
+        for (let i = 0; i < 20; i++) {
+          const t = (i / 20) * Math.PI * 2;
+          wipeAt(cx + Math.cos(t) * r, cy + Math.sin(t) * r, 1);
+        }
+      }
+      lastPt = null;
+    }, 100);
+  }
+
+  // Pointer events on the frost canvas
+  frost.addEventListener('pointerdown', onDown);
+  frost.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup',   onUp);
+  window.addEventListener('pointercancel', onUp);
+
+  // Plink trigger after intentional clears
+  let plinkAcc = 0;
+  setInterval(() => {
+    // Probability check that scales with drop count — wet windows plink more
+    if (drops.length > 6 && Math.random() < 0.18) playPlink();
+  }, 850);
+
+  raf = requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
