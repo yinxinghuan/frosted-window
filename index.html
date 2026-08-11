@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+    <script src="./alteru-storage-scope.js" data-alteru-storage-scope data-game-storage-id="1f9d3ce7-4ded-4ab1-8556-58310a8e5b29"></script>
     <meta name="game-uuid" content="1f9d3ce7-4ded-4ab1-8556-58310a8e5b29" />
 
 <meta charset="UTF-8" />
@@ -1900,12 +1901,12 @@
   const STORAGE_KEY = 'frosted_window_lifetime_v1';
   function loadLifetime() {
     try {
-      const v = parseFloat(localStorage.getItem(STORAGE_KEY) || '0');
+      const v = parseFloat(alteruLocalStorage.getItem(STORAGE_KEY) || '0');
       if (Number.isFinite(v) && v > 0) lifetime = v;
     } catch (_) {}
   }
   function saveLifetime() {
-    try { localStorage.setItem(STORAGE_KEY, String(Math.floor(lifetime))); } catch (_) {}
+    try { alteruLocalStorage.setItem(STORAGE_KEY, String(Math.floor(lifetime))); } catch (_) {}
   }
   let saveAcc = 0;
   function maybeSave(dtMs) {
@@ -1985,7 +1986,7 @@
       rebuildAmbient();
       scheduleAmbientBreath();
     }
-    try { localStorage.setItem('frosted_window_theme', name); } catch (_) {}
+    try { alteruLocalStorage.setItem('frosted_window_theme', name); } catch (_) {}
   }
 
   themeStrip.addEventListener('pointerdown', e => {
@@ -2029,7 +2030,7 @@
   resize();
   const urlTheme = new URLSearchParams(window.location.search).get('theme');
   let saved = null;
-  try { saved = localStorage.getItem('frosted_window_theme'); } catch (_) {}
+  try { saved = alteruLocalStorage.getItem('frosted_window_theme'); } catch (_) {}
   const startTheme = (urlTheme && THEMES[urlTheme]) ? urlTheme
                     : (saved && THEMES[saved]) ? saved
                     : 'rain';
